@@ -6,7 +6,7 @@ from fabric.contrib.files import append, sed
 import os
 
 def stage():
-    env.hosts = ['ec2-79-125-29-204.eu-west-1.compute.amazonaws.com']
+    env.hosts = ['ec2-46-51-165-44.eu-west-1.compute.amazonaws.com']
     env.host_family = 'stage'
     env.user = 'ec2-user'
     env.key_filename = os.path.join(os.path.expanduser('~'), '.ssh', 'svti-frank.pem')
@@ -18,19 +18,10 @@ def install_virtualenv():
     sudo('pip install virtualenv virtualenvwrapper')
     sudo('mkdir -p %(virtualenv_home)s' % env)
     sudo('chown -R %(user)s %(virtualenv_home)s' % env)
-    VIRTUALENV_BASHRC="""
-        test -r /usr/bin/virtualenvwrapper.sh && . /usr/bin/virtualenvwrapper.sh
-        export WORKON_HOME=%(virtualenv_home)s
-        export PIP_VIRTUALENV_BASE=$WORKON_HOME
-        # To tell pip to only run if there is a virtualenv currently activated, and to bail if not, use:
-        export PIP_REQUIRE_VIRTUALENV=true
-    """ % env
-    bashrc_lines = [ l.strip() for l in VIRTUALENV_BASHRC.splitlines() if l.strip() ]
-    append('~/.bashrc', bashrc_lines)
     with cd('%(virtualenv_home)s' % env):
         run('mkvirtualenv --no-site-packages %(venv_name)s' % env)
 
-def install_cairo():
+def install_py2cairo():
     """following instructions at:
         http://agiletesting.blogspot.com/2011_04_01_archive.html
         http://graphite.readthedocs.org/en/latest/install.html"""
@@ -63,6 +54,14 @@ def install_graphite():
         run('pip install http://launchpad.net/graphite/0.9/0.9.8/+download/carbon-0.9.8.tar.gz')
         run('pip install http://launchpad.net/graphite/0.9/0.9.8/+download/whisper-0.9.8.tar.gz')
         run('pip install http://launchpad.net/graphite/0.9/0.9.8/+download/graphite-web-0.9.8.tar.gz')
+    sudo('chown -R %(user)s /opt/graphite/storage/log/' % env)
+    with prefix('workon %(venv_name)s' % env):
+        run('pip install django')
+        run('cd /opt/graphite/webapp/graphite; python manage.py syncdb --noinput')
+        with settings(warn_only=True):
+            run('cd /opt/graphite/; python bin/carbon-cache.py start')
+    sudo('chown -R apache:apache /opt/graphite/storage/')
+    sudo('chown -R apache:apache /opt/graphite/storage/log/webapp/')
 
 def install_mod_wsgi():
     with cd('/tmp'):
@@ -78,9 +77,9 @@ def configure():
     # get latest config in place
     run('wget https://bitbucket.org/svtidevelopers/statistik/get/tip.tar.gz')
     run('tar xfz tip.tar.gz')
-    with cd('statistik'):
+    with cd('svtidevelopers-statistik-*'):
         sudo('rm -rf /opt/config; mv config /opt/')
-    run('rm -rf tip.tar* statistik')
+    run('rm -rf tip.tar* svtidevelopers-statistik-*')
     # convenience files
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
     run('rm ~/.bashrc; ln -s /opt/config/bashrc ~/.bashrc')
@@ -96,23 +95,22 @@ def configure():
     with prefix('workon %(venv_name)s' % env):
         python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
-        print django_root
-        print python_root
-    with cd('/etc/httpd/conf.d/'):
-        sed('graphite.conf', '@DJANGO_ROOT@', django_root, use_sudo=True)
-        sed('graphite.conf', '@PYTHON_ROOT@', python_root, use_sudo=True)
+    sed('/etc/httpd/conf.d/graphite.conf', '@DJANGO_ROOT@', django_root, use_sudo=True)
+    sed('/etc/httpd/conf.d/graphite.conf', '@PYTHON_ROOT@', python_root, use_sudo=True)
+
+def restart_apache():
+    "Restart the web server"
+    require('hosts', provided_by=[ stage ])
+    with settings(warn_only=True):
+        sudo('/usr/sbin/apachectl restart', pty=True)
 
 def setup():
-    """
-    Setup a fresh virtualenv as well as a few useful directories, then run
-    a full deployment
-    """
     require('hosts', provided_by=[ stage ])
-    # install required packages
-    sudo('yum -y install screen mlocate make gcc python-devel mercurial')
-    sudo('/usr/bin/updatedb')
-#   install_mod_wsgi
-#   install_virtualenv()
-#   install_pycairo()
-#    install_graphite()
+    sudo('yum -y install screen mlocate make gcc python-devel mercurial httpd-devel')
+    install_mod_wsgi()
+    install_virtualenv()
+    install_py2cairo()
+    install_graphite()
     configure()
+    sudo('/usr/bin/updatedb')
+    restart_apache()
