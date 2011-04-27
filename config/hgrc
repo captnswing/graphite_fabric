@@ -1,0 +1,10 @@
+[ui]
+username = captnswing <frank.hoffsummer@gmail.com>
+
+[extensions]
+hgext.fetch= 
+
+[auth]
+svti.prefix = https://bitbucket.org/svtidevelopers
+svti.username = captnswing
+svti.password = p1092510
