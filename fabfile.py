@@ -21,6 +21,19 @@ def install_virtualenv():
     with cd('%(virtualenv_home)s' % env):
         run('mkvirtualenv --no-site-packages %(venv_name)s' % env)
 
+def install_nodejs():
+    sudo('yum install -y gcc-c++ openssl-devel curl libssl-dev apache2-utils git-core')
+    with cd('/tmp/'):
+        sudo('rm -rf node')
+        run('git clone https://github.com/joyent/node.git')
+        with cd('node'):
+            run('./configure && make')
+            sudo('make install')
+        sudo('rm -rf npm')
+        run('git clone git://github.com/isaacs/npm.git')
+        with cd('node'):
+            sudo('env PATH=/usr/local/bin/:$PATH make install')
+
 def install_py2cairo():
     """following instructions at:
         http://agiletesting.blogspot.com/2011_04_01_archive.html
@@ -58,10 +71,8 @@ def install_graphite():
     with prefix('workon %(venv_name)s' % env):
         run('pip install django')
         run('cd /opt/graphite/webapp/graphite; python manage.py syncdb --noinput')
-        with settings(warn_only=True):
-            run('cd /opt/graphite/; python bin/carbon-cache.py start')
-    sudo('chown -R apache:apache /opt/graphite/storage/')
-    sudo('chown -R apache:apache /opt/graphite/storage/log/webapp/')
+        sudo('test -e /opt/graphite/storage/log/webapp || mkdir -p /opt/graphite/storage/log/webapp')
+        sudo('chown -R apache:apache /opt/graphite/storage/log/webapp')
 
 def install_mod_wsgi():
     with cd('/tmp'):
@@ -79,6 +90,7 @@ def configure():
     run('tar xfz tip.tar.gz')
     with cd('svtidevelopers-statistik-*'):
         sudo('rm -rf /opt/config; mv config /opt/')
+        sudo('rm -rf /opt/statsd; mv statsd /opt/')
     run('rm -rf tip.tar* svtidevelopers-statistik-*')
     # convenience files
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
@@ -97,12 +109,18 @@ def configure():
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
     sed('/etc/httpd/conf.d/graphite.conf', '@DJANGO_ROOT@', django_root, use_sudo=True)
     sed('/etc/httpd/conf.d/graphite.conf', '@PYTHON_ROOT@', python_root, use_sudo=True)
+    # statsd config
+    sudo('rm /etc/statsd.js; ln -s /opt/config/etc/statsd.js /etc/statsd.js')
+    sed('/etc/statsd.js', '@GRAPHITE_HOST@', env.hosts[0], use_sudo=True)
 
-def restart_apache():
-    "Restart the web server"
+def start_services():
     require('hosts', provided_by=[ stage ])
+    with prefix('workon %(venv_name)s' % env):
+        venv_python = run('which python')
     with settings(warn_only=True):
         sudo('/usr/sbin/apachectl restart', pty=True)
+        sudo('%s /opt/graphite/bin/carbon-cache.py start' % venv_python)
+    sudo('nohup /usr/local/bin/node /opt/statsd/stats.js /etc/statsd.js &')
 
 def setup():
     require('hosts', provided_by=[ stage ])
@@ -113,4 +131,4 @@ def setup():
     install_graphite()
     configure()
     sudo('/usr/bin/updatedb')
-    restart_apache()
+    start_services()
