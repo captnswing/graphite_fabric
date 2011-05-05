@@ -7,6 +7,7 @@ export PAGER=less
 export LESS="-i -r -X"
 
 test -r /usr/bin/virtualenvwrapper.sh && . /usr/bin/virtualenvwrapper.sh
+test -r /usr/local/bin/virtualenvwrapper.sh && . /usr/local/bin/virtualenvwrapper.sh
 export WORKON_HOME=/opt/virtualenvs
 # To tell pip to only run if there is a virtualenv currently activated, and to bail if not, use:
 export PIP_REQUIRE_VIRTUALENV=true
