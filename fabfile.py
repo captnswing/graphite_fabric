@@ -16,33 +16,34 @@ def lab():
     env.graphite_host = '10.20.61.145' # internal interface
 
 def stage():
-    env.hosts = ['ec2-46-137-26-78.eu-west-1.compute.amazonaws.com']
+    env.hosts = ['ec2-46-51-158-60.eu-west-1.compute.amazonaws.com']
     env.user = 'ec2-user'
     env.key_filename = os.path.join(os.path.expanduser('~'), '.ssh', 'svti-frank.pem')
     env.virtualenv_home = '/opt/virtualenvs'
     env.venv_name = 'base'
     env.svtproxy = False
     env.python = '/usr/local/bin/python2.7'
-    env.graphite_host = 'ec2-46-137-26-78.eu-west-1.compute.amazonaws.com'
+    env.graphite_host = 'ec2-46-51-158-60.eu-west-1.compute.amazonaws.com'
 
 def install_python27():
     """installs python 2.7.1 as /usr/local/bin/python2.7"""
     if exists('/usr/local/bin/python2.7'):
         return
+    sudo('yum -y install bzip2-devel zlib-devel sqlite-devel')
     with cd('/tmp'):
         run('wget http://python.org/ftp/python/2.7.1/Python-2.7.1.tgz')
-        run('tar xfz  Python-2.7.1.tgz')
-        with cd('Python-2.7.1'):
-            run('./configure --enable-shared')
-            sudo('make -i altinstall')
+        with hide('running', 'stdout'):
+            run('tar xfz  Python-2.7.1.tgz')
+            with cd('Python-2.7.1'):
+                run('./configure --enable-shared')
+                sudo('make -i altinstall')
     append('/etc/ld.so.conf.d/python2.7.conf', '/usr/local/lib', use_sudo=True)
     sudo('/sbin/ldconfig')
 
 def install_mod_wsgi():
     """installs mod_wsgi 3.3 using python 2.7"""
-    if exists('/usr/lib64/httpd/modules/mod_wsgi.so'):
+    if exists('/usr/lib64/httpd/modules/mod_wsgi.so') or exists('/usr/lib/httpd/modules/mod_wsgi.so'):
         return
-    sudo('yum -y install make gcc httpd-devel')
     with cd('/tmp'):
         sudo('wget http://modwsgi.googlecode.com/files/mod_wsgi-3.3.tar.gz')
         sudo('tar -xzvf mod_wsgi-3.3.tar.gz')
@@ -87,7 +88,7 @@ def install_nodejs():
     """installs node.js from trunk"""
     if exists('/usr/local/bin/node'):
         return
-    sudo('yum install -y gcc-c++ openssl-devel')
+    sudo('yum install -y openssl-devel')
     with cd('/tmp/'):
         sudo('rm -rf node')
         run('curl -L https://github.com/joyent/node/tarball/master -o node_trunk.tar.gz')
@@ -128,25 +129,27 @@ def install_py2cairo():
             # "pip install py2cairo" picks python3.0 version of py2cairo!
             run('pip install http://www.cairographics.org/releases/py2cairo-1.8.10.tar.gz')
 
+def install_bzr():
+    """installs bzr on redhat5"""
+    if not exists('/usr/bin/bzr'):
+        with cd('/tmp'):
+            run('curl -O http://download.fedora.redhat.com/pub/epel/5/i386/epel-release-5-4.noarch.rpm')
+            run('sudo rpm -Uvh epel-release-5-4.noarch.rpm')
+        sudo('yum -y install bzr')
+
 def install_graphite():
     """installs graphite from trunk"""
     # create target dir with correct permissions
     sudo('test -e /opt/graphite || mkdir /opt/graphite')
     sudo('chown -R %(user)s /opt/graphite' % env)
-#    # install bzr
-#    if not exists('/usr/bin/bzr'):
-#        with cd('/tmp'):
-#            run('curl -O http://download.fedora.redhat.com/pub/epel/5/i386/epel-release-5-4.noarch.rpm')
-#            run('sudo rpm -Uvh epel-release-5-4.noarch.rpm')
-#        sudo('yum -y install bzr')
     # hm I cannot branch with bzr through the proxy https://bugs.launchpad.net/bzr/+bug/198646
     # and I cannot download an arbitrary version as tarball from launchpad https://bugs.launchpad.net/loggerhead/+bug/240580
-    # (bzr sucks?)
     # hence:
-    put('graphite_trunk.tar.gz')
+    if not exists('~/graphite_trunk.tar.gz'):
+        put('graphite_trunk.tar.gz')
     run('tar xfz graphite_trunk.tar.gz')
     with prefix('workon %(venv_name)s' % env):
-        run('pip install python-memcached python-ldap simplejson')
+        run('pip install python-memcached simplejson')
         with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
             #run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/graphite-web-0.9.8.tar.gz')
             with cd('graphite_trunk'):
@@ -212,7 +215,8 @@ def setup():
         append('/etc/profile.d/proxy.sh', 'export https_proxy=https://proxy.svt.se:8080', use_sudo=True)
         append('~/.bashrc', 'export http_proxy=http://proxy.svt.se:8080')
         append('~/.bashrc', 'export https_proxy=https://proxy.svt.se:8080')
-    sudo('yum -y install screen mlocate mercurial bzr')
+    sudo('yum -y install screen mlocate mercurial')
+    sudo('yum -y install make gcc gcc-c++ httpd-devel')
     install_python27()
     install_mod_wsgi()
     install_virtualenv()
