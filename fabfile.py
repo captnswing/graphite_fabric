@@ -172,7 +172,8 @@ def configure_services():
     sudo('rm /etc/httpd/conf/httpd.conf; ln -s /opt/config/etc/httpd/conf/httpd.conf /etc/httpd/conf/httpd.conf')
     sudo('rm /etc/httpd/conf.d/graphite.conf; ln -s /opt/config/etc/httpd/conf.d/graphite.conf /etc/httpd/conf.d/graphite.conf')
     # fix permissions
-    sudo('chown -R %(user)s ~/.virtualenvs' % env)
+    if exists('~/.virtualenvs'):
+        sudo('chown -R %(user)s /home/%(user)s/.virtualenvs' % env)
     with prefix('workon %(venv_name)s' % env):
         python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
