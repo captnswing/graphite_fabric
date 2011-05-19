@@ -195,9 +195,24 @@ def start_services():
 
 def check_services():
     # psa is a macro in .bashrc
-    run('psa statsd')
-    run('psa carbon')
-    run('psa httpd')
+    with settings(warn_only=True):
+        run('psa statsd')
+        run('psa carbon')
+        run('psa httpd')
+    # derive url of an graphite image
+    with hide('running', 'stdout'):
+        hostname = run('uname -n')
+    image_url = 'http://%s/render/?target=carbon.agents.%s.pointsssPerUpdate' % (env.hosts[0], hostname)
+    # open the image
+    import urllib2
+    req = urllib2.Request(image_url)
+    # check the response code
+    response = urllib2.urlopen(req)
+    # tell it like it is
+    if response.getcode() == 200:
+        print "graphite seems to be running"
+    else:
+        print "something wrong with graphite installation"
 
 def stop_services():
     require('hosts', provided_by=[ stage, lab ])
