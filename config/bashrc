@@ -10,7 +10,7 @@ export COLOR_NC='\e[0m'
 export COLOR_GREEN='\e[0;32m'
 export PS1="\[${COLOR_GREEN}\]\w > \[${COLOR_NC}\]"
 
-export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python2.7
+export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
 test -r /usr/bin/virtualenvwrapper.sh && . /usr/bin/virtualenvwrapper.sh
 test -r /usr/local/bin/virtualenvwrapper.sh && . /usr/local/bin/virtualenvwrapper.sh
 export WORKON_HOME=/opt/virtualenvs
