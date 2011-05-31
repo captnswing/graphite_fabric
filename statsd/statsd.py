@@ -1,4 +1,4 @@
-# statsd.py
+# python-example.py
 
 # Steve Ivy <steveivy@gmail.com>
 # http://monkinetic.com
