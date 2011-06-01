@@ -1,22 +1,57 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Author:     Frank Hoffsümmer
+Disclaimer: this code works on my machine (tm)
+
+fabric script that installs graphite-trunk and statsd on an Amazon EC2 linux instance.
+
+On the way, it installs all of graphites dependencies:
+http://graphite.readthedocs.org/en/latest/install.html
+
+taking some clues from:
+http://agiletesting.blogspot.com/2011/04/installing-and-configuring-graphite.html
+
+once fabric is installed, and the ec2 instance is running, just paste the hostname of the
+instance into the ec2 function's "env.hosts" variable, and then invoke
+
+$ fab ec2 setup
+
+in the directory that contains this file.
+"""
 from fabric.api import *
 from fabric.context_managers import cd
-from fabric.contrib.files import append, sed, exists
+from fabric.contrib.files import sed, exists
 import os
 
 def ec2():
-    env.hosts = ['ec2-46-51-158-241.eu-west-1.compute.amazonaws.com']
+    """
+    configuration parameters for an Amazon EC2 standard Linux instance.
+    """
+    # the ec2 instance needs to be configured with an ec2 security group
+    # that allows for tcp/ip traffic on ports
+    # 22 (ssh), 80 (http), 443 (https), 2003 (graphite-carbon)
+    # and udp traffic on port
+    # 8125 (statsd)
+    #
+    # put the ec2 hostname in here
+    env.hosts = ['ec2-46-137-43-249.eu-west-1.compute.amazonaws.com']
+    # this is the username on any standard amazon linux ami instance
     env.user = 'ec2-user'
+    # local path to the keypair the ec2 instance was configured with
     env.key_filename = os.path.join(os.path.expanduser('~'), '.ssh', 'svti-frank.pem')
+    # location of the virtualenvs
     env.virtualenv_home = '/opt/virtualenvs'
+    # name of the virtualenv we're using here
     env.venv_name = 'base'
-    env.svtproxy = False
+    # python 2.6 that follows with the standard amazon linux ami is fine
     env.python = '/usr/bin/python'
     env.graphite_host = env.hosts[0]
 
 def install_mod_wsgi():
-    """installs mod_wsgi 3.3"""
+    """
+    installs mod_wsgi 3.3.
+    """
     if exists('/usr/lib64/httpd/modules/mod_wsgi.so') or exists('/usr/lib/httpd/modules/mod_wsgi.so'):
         return
     with cd('/tmp'):
@@ -28,24 +63,27 @@ def install_mod_wsgi():
         sudo('rm -rf mod_wsgi-3.3.tar.gz mod_wsgi-3.3')
 
 def configure_shell():
+    """
+    fetches all config files from bitbucket,
+    and links the shell related config files into place.
+    """
     run('wget https://bitbucket.org/svtidevelopers/statistik/get/tip.tar.gz')
     run('tar xfz tip.tar.gz')
     with cd('svtidevelopers-statistik-*'):
+        # move config directory tree into /opt
         sudo('rm -rf /opt/config; mv config /opt/')
-        sudo('rm -rf /opt/statsd; mv statsd /opt/')
     run('rm -rf tip.tar* svtidevelopers-statistik-*')
-    # shell config
+    # link shell config files into place
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
     run('rm ~/.bashrc; ln -s /opt/config/bashrc ~/.bashrc')
     sed('~/.bashrc', '@PYTHON@', env.python)
-    # proxy config
-    if env.svtproxy:
-        append('~/.bashrc', 'export http_proxy=http://proxy.svt.se:8080')
-        append('~/.bashrc', 'export https_proxy=https://proxy.svt.se:8080')
 
 def install_virtualenv():
-    """installs virtualenv and virtualenvwrapper"""
-    if exists('/usr/local/bin/virtualenvwrapper.sh'):
+    """
+    installs virtualenv and virtualenvwrapper.
+    """
+    sudo('mkdir -p %(virtualenv_home)s' % env)
+    if exists('/usr/local/bin/virtualenvwrapper.sh') or exists('/usr/bin/virtualenvwrapper.sh'):
         return
     with cd('/tmp'):
         run('wget http://python-distribute.org/distribute_setup.py')
@@ -55,11 +93,14 @@ def install_virtualenv():
         sudo('/usr/bin/pip install -U virtualenv virtualenvwrapper')
         run('/usr/bin/virtualenvwrapper.sh')
     sudo('chown -R %(user)s %(virtualenv_home)s' % env)
-    # create virtualenv
+    # create virtualenv env.venv_name
     with cd('%(virtualenv_home)s' % env):
         run('mkvirtualenv --no-site-packages %(venv_name)s' % env)
 
 def install_dtach():
+    """
+    installs dtach, to speed things up.
+    """
     if exists('/usr/local/bin/dtach'):
         return
     with cd('/tmp/'):
@@ -71,7 +112,9 @@ def install_dtach():
             sudo('mv dtach /usr/local/bin/')
 
 def install_nodejs():
-    """installs node.js from trunk"""
+    """
+    installs node.js from latest trunk.
+    """
     if exists('/usr/local/bin/node'):
         return
     sudo('yum install -y -q openssl-devel')
@@ -81,21 +124,25 @@ def install_nodejs():
         run('tar xfz node_trunk.tar.gz')
         with cd('joyent-node*'):
             run('./configure')
+            # 'sudo make install' takes quite a while to complete
+            # I want to have this running in the background so the fabric script can continue with other things
             # see http://docs.fabfile.org/en/1.0.1/faq.html#why-can-t-i-run-programs-in-the-background-with-it-makes-fabric-hang
+            # on different methods how to detach long running processes on the target host with fabric
+            # I couldn't get screen -d -m to work though. hence 'dtach', which works fine
             sudo('/usr/local/bin/dtach -n /tmp/node make install')
 
 def install_cairo():
-    """installs cairo backend"""
-    # http://graphite.readthedocs.org/en/latest/install.html
-    # http://agiletesting.blogspot.com/2011_04_01_archive.html
+    """
+    installs latest version of pixman and cairo backend.
+    """
+    # graphite is not satisfied with versions available through "yum install"
     if exists('/usr/local/lib/libcairo.so'):
         return
     sudo('yum -y -q install pkgconfig valgrind-devel libpng-devel freetype-devel fontconfig-devel')
     with cd('/tmp'):
         # install pixman
         sudo('rm -rf pixman*')
-        #run('wget http://cairographics.org/releases/pixman-0.20.2.tar.gz')
-        run('wget http://svti-packages.s3.amazonaws.com/pixman-0.20.2.tar.gz')
+        run('wget http://cairographics.org/releases/pixman-0.20.2.tar.gz')
         run('tar xfz pixman-0.20.2.tar.gz')
         with cd('pixman-0.20.2'):
             with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
@@ -103,48 +150,48 @@ def install_cairo():
             sudo('make install')
         # install cairo
         sudo('rm -rf cairo*')
-        #run('wget http://cairographics.org/releases/cairo-1.10.2.tar.gz')
-        run('wget http://svti-packages.s3.amazonaws.com/cairo-1.10.2.tar.gz')
+        run('wget http://cairographics.org/releases/cairo-1.10.2.tar.gz')
         run('tar xfz cairo-1.10.2.tar.gz')
         with cd('cairo-1.10.2'):
             with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
                 run('./configure --enable-xlib=no --disable-gobject')
             sudo('make install')
 
-def install_py2cairo():
-    """install py2cairo in virtualenv"""
-    with prefix('workon %(venv_name)s' % env):
-        with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
-            # "pip install py2cairo" picks python3.0 version of py2cairo!
-            run('pip install http://www.cairographics.org/releases/py2cairo-1.8.10.tar.gz')
-
 def install_graphite():
-    """installs graphite from trunk"""
+    """
+    installs graphite from trunk. because 0.9.8 has some bugs.
+    """
     # create target dir with correct permissions
     sudo('test -e /opt/graphite || mkdir /opt/graphite')
     sudo('chown -R %(user)s /opt/graphite' % env)
-    # hm I cannot branch with bzr through the SVT proxy https://bugs.launchpad.net/bzr/+bug/198646
-    # and I cannot download an arbitrary version as tarball from launchpad https://bugs.launchpad.net/loggerhead/+bug/240580
-    # hence:
-    run('wget http://svti-packages.s3.amazonaws.com/graphite_trunk.tar.gz')
-    run('tar xfz graphite_trunk.tar.gz')
+    # cannot download an arbitrary version as tarball from launchpad https://bugs.launchpad.net/loggerhead/+bug/240580
+    run('bzr branch lp:graphite')
     with prefix('workon %(venv_name)s' % env):
-        run('pip install python-memcached simplejson')
+        # install some dependencies
+        run('pip install python-memcached simplejson django')
         with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
-            #run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/graphite-web-0.9.8.tar.gz')
-            with cd('graphite_trunk'):
+            # install grahite from trunk
+            with cd('graphite'):
                 run('pip install .')
+            # install latest release of carbon
             run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/carbon-0.9.8.tar.gz')
+            # install latest release of whisper
             run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/whisper-0.9.8.tar.gz')
-            run('pip install django')
+            # "pip install py2cairo" picks python3.0 version of py2cairo, hence explicit link
+            run('pip install http://www.cairographics.org/releases/py2cairo-1.8.10.tar.gz')
+        # run the django webapp syncdb command
         run('cd /opt/graphite/webapp/graphite; python manage.py syncdb --noinput')
+    # create required directories
     sudo('test -e /opt/graphite/storage/log/webapp || mkdir -p /opt/graphite/storage/log/webapp')
+    # set permissions for the apache process
     sudo('chown -R apache:apache /opt/graphite/storage')
 
 def configure_services():
     """
-    extracts a tar archive of all config files into /opt/config tree and symlinks all files into place
+    symlinks configfiles under /opt/config tree into place.
+    changes placeholder variables in them to correct values.
     """
+    # find out pathes
     with prefix('workon %(venv_name)s' % env):
         python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
@@ -171,23 +218,33 @@ def configure_services():
         sudo('chown -R %(user)s /home/%(user)s/.virtualenvs' % env)
 
 def start_supervisord():
-    if not exists('/opt/virtualenvs/base/bin/supervisord'):
+    """
+    starts supervisord (installs it first, if not present).
+    this starts all the configured services as well.
+    """
+    if not exists('/opt/virtualenvs/%(venv_name)s/bin/supervisord' % env):
         with prefix('workon %(venv_name)s' % env):
             run('pip install supervisor')
-    sudo('/opt/virtualenvs/base/bin/supervisord')
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisord' % env)
 
 def start_services():
-    sudo('/opt/virtualenvs/base/bin/supervisorctl start apache')
-    sudo('/opt/virtualenvs/base/bin/supervisorctl start carbon')
-    sudo('/opt/virtualenvs/base/bin/supervisorctl start node')
+    """
+    starts the configured services and keeps them running.
+    """
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start apache' % env)
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start carbon' % env)
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start node' % env)
     check_services()
 
 def check_services():
-    sudo('/opt/virtualenvs/base/bin/supervisorctl status')
+    """
+    see if the configured services are running.
+    """
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl status' % env)
     # derive url of an graphite image
     with hide('running', 'stdout'):
         hostname = run('uname -n')
-    image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.hosts[0], hostname)
+    image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.graphite_host, hostname)
     # open the image
     import urllib2
     req = urllib2.Request(image_url)
@@ -200,28 +257,26 @@ def check_services():
         print "something wrong with graphite installation"
 
 def stop_services():
-    sudo('/opt/virtualenvs/base/bin/supervisorctl stop apache')
-    sudo('/opt/virtualenvs/base/bin/supervisorctl stop carbon')
-    sudo('/opt/virtualenvs/base/bin/supervisorctl stop node')
+    """
+    takes the configured services down nicely.
+    """
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop apache' % env)
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop carbon' % env)
+    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop node' % env)
     check_services()
 
 def setup():
+    """
+    performs the required steps to install statsd and graphite.
+    """
     require('hosts', provided_by=[ ec2 ])
-    sudo('mkdir -p %(virtualenv_home)s' % env)
-    if env.svtproxy:
-        append('/etc/profile.d/proxy.sh', 'export http_proxy=http://proxy.svt.se:8080', use_sudo=True)
-        append('/etc/profile.d/proxy.sh', 'export https_proxy=https://proxy.svt.se:8080', use_sudo=True)
-        append('~/.bashrc', 'export http_proxy=http://proxy.svt.se:8080')
-        append('~/.bashrc', 'export https_proxy=https://proxy.svt.se:8080')
-    sudo('yum -y -q install screen mlocate make gcc gcc-c++ python26-devel httpd-devel')
-    # couldn't get 'screen -d -m' to work. hence dtach
+    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel')
     install_dtach()
     install_nodejs()
     install_cairo()
     install_mod_wsgi()
     configure_shell()
     install_virtualenv()
-    install_py2cairo()
     install_graphite()
     configure_services()
     start_supervisord()
