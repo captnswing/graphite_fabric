@@ -3,26 +3,13 @@
 """
 Author:     Frank Hoffsümmer
 Disclaimer: this code works on my machine (tm)
-
-fabric script that installs graphite-trunk and statsd on an Amazon EC2 linux instance.
-
-On the way, it installs all of graphites dependencies:
-http://graphite.readthedocs.org/en/latest/install.html
-
-taking some clues from:
-http://agiletesting.blogspot.com/2011/04/installing-and-configuring-graphite.html
-
-once fabric is installed, and the ec2 instance is running, just paste the hostname of the
-instance into the ec2 function's "env.hosts" variable, and then invoke
-
-$ fab ec2 setup
-
-in the directory that contains this file. For more on fabric, see http://docs.fabfile.org
 """
 from fabric.api import *
 from fabric.context_managers import cd
 from fabric.contrib.files import sed, exists
-import os
+
+EC2_HOSTNAME = 'ec2-46-137-57-226.eu-west-1.compute.amazonaws.com'
+EC2_KEYPAIR = '/Users/frank/.ssh/svti-frank.pem'
 
 def ec2():
     """
@@ -35,11 +22,11 @@ def ec2():
     # 8125 (statsd)
     #
     # put the ec2 hostname in here
-    env.hosts = ['ec2-46-137-57-226.eu-west-1.compute.amazonaws.com']
+    env.hosts = [EC2_HOSTNAME]
     # this is the username on any standard amazon linux ami instance
     env.user = 'ec2-user'
     # local path to the keypair the ec2 instance was configured with
-    env.key_filename = os.path.join(os.path.expanduser('~'), '.ssh', 'svti-frank.pem')
+    env.key_filename = EC2_KEYPAIR
     # location of the virtualenvs
     env.virtualenv_home = '/opt/virtualenvs'
     # name of the virtualenv we're using here
@@ -119,10 +106,11 @@ def install_nodejs():
         return
     sudo('yum install -y -q openssl-devel')
     with cd('/tmp/'):
-        sudo('rm -rf node joyent-node*')
-        run('curl -L https://github.com/joyent/node/tarball/master -o node_trunk.tar.gz')
-        run('tar xfz node_trunk.tar.gz')
-        with cd('joyent-node*'):
+        # from https://gist.github.com/579814
+        sudo('rm -rf node-latest-install')
+        run('mkdir node-latest-install')
+        with cd('node-latest-install'):
+            run('curl http://nodejs.org/dist/node-latest.tar.gz | tar xz --strip-components=1')
             run('./configure')
             # 'sudo make install' takes quite a while to complete
             # I want to have this running in the background so the fabric script can continue with other things
@@ -134,7 +122,7 @@ def install_nodejs():
 def install_cairo():
     """
     installs latest version of pixman and cairo backend.
-    """ 
+    """
     # graphite is not satisfied with versions available through "yum install"
     if exists('/usr/local/lib/libcairo.so'):
         return

@@ -29,7 +29,7 @@ On your local machine, you need python2 >= 2.6 and python-fabric http://docs.fab
 
 ::
 
-    pip install fabric
+    $ pip install fabric
 
 Running the script
 ==================
