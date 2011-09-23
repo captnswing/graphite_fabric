@@ -17,7 +17,7 @@ instance into the ec2 function's "env.hosts" variable, and then invoke
 
 $ fab ec2 setup
 
-in the directory that contains this file.
+in the directory that contains this file. For more on fabric, see http://docs.fabfile.org
 """
 from fabric.api import *
 from fabric.context_managers import cd
@@ -35,7 +35,7 @@ def ec2():
     # 8125 (statsd)
     #
     # put the ec2 hostname in here
-    env.hosts = ['ec2-46-137-43-249.eu-west-1.compute.amazonaws.com']
+    env.hosts = ['ec2-79-125-67-21.eu-west-1.compute.amazonaws.com']
     # this is the username on any standard amazon linux ami instance
     env.user = 'ec2-user'
     # local path to the keypair the ec2 instance was configured with
@@ -134,7 +134,7 @@ def install_nodejs():
 def install_cairo():
     """
     installs latest version of pixman and cairo backend.
-    """
+    """ 
     # graphite is not satisfied with versions available through "yum install"
     if exists('/usr/local/lib/libcairo.so'):
         return
@@ -165,12 +165,13 @@ def install_graphite():
     sudo('test -e /opt/graphite || mkdir /opt/graphite')
     sudo('chown -R %(user)s /opt/graphite' % env)
     # cannot download an arbitrary version as tarball from launchpad https://bugs.launchpad.net/loggerhead/+bug/240580
+    sudo('rm -rf graphite')
     run('bzr branch lp:graphite')
     with prefix('workon %(venv_name)s' % env):
         # install some dependencies
-        run('pip install python-memcached simplejson django')
+        run('pip install python-memcached simplejson django django-tagging')
         with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
-            # install grahite from trunk
+            # install graphite from trunk - less bugs
             with cd('graphite'):
                 run('pip install .')
             # install latest release of carbon
@@ -245,6 +246,7 @@ def check_services():
     with hide('running', 'stdout'):
         hostname = run('uname -n')
     image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.graphite_host, hostname)
+    print image_url
     # open the image
     import urllib2
     req = urllib2.Request(image_url)
