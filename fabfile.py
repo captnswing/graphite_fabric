@@ -35,7 +35,7 @@ def ec2():
     # 8125 (statsd)
     #
     # put the ec2 hostname in here
-    env.hosts = ['ec2-79-125-67-21.eu-west-1.compute.amazonaws.com']
+    env.hosts = ['ec2-46-137-57-226.eu-west-1.compute.amazonaws.com']
     # this is the username on any standard amazon linux ami instance
     env.user = 'ec2-user'
     # local path to the keypair the ec2 instance was configured with
@@ -69,10 +69,10 @@ def configure_shell():
     """
     run('wget https://bitbucket.org/captnswing/graphite_fabfile/get/tip.tar.gz')
     run('tar xfz tip.tar.gz')
-    with cd('graphite_fabfile-*'):
+    with cd('captnswing-graphite_fabfile-*'):
         # move config directory tree into /opt
         sudo('rm -rf /opt/config; mv config /opt/')
-    run('rm -rf tip.tar* graphite_fabfile-*')
+    run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
     # link shell config files into place
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
     run('rm ~/.bashrc; ln -s /opt/config/bashrc ~/.bashrc')
