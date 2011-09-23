@@ -17,6 +17,8 @@ Suitable Amazon EC2 linux instance (I use ``Basic 64-bit Amazon Linux AMI 2011.0
 
 .. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/860484efac99/ec2instance.png
 
+The instance need to be configured with a security group that has the necessary UDP / TCP ports opened.
+
 .. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/860484efac99/ec2firewall.png
 
 
