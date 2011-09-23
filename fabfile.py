@@ -67,12 +67,12 @@ def configure_shell():
     fetches all config files from bitbucket,
     and links the shell related config files into place.
     """
-    run('wget https://bitbucket.org/svtidevelopers/statistik/get/tip.tar.gz')
+    run('wget https://bitbucket.org/captnswing/graphite_fabfile/get/tip.tar.gz')
     run('tar xfz tip.tar.gz')
-    with cd('svtidevelopers-statistik-*'):
+    with cd('graphite_fabfile-*'):
         # move config directory tree into /opt
         sudo('rm -rf /opt/config; mv config /opt/')
-    run('rm -rf tip.tar* svtidevelopers-statistik-*')
+    run('rm -rf tip.tar* graphite_fabfile-*')
     # link shell config files into place
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
     run('rm ~/.bashrc; ln -s /opt/config/bashrc ~/.bashrc')
