@@ -15,9 +15,9 @@ Amazon EC2
 
 Suitable Amazon EC2 linux instance (I use ``Basic 64-bit Amazon Linux AMI 2011.02.1 Beta``)
 
-.. image:: ec2instance.png
+.. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/860484efac99/ec2instance.png
 
-.. image:: ec2firewall.png
+.. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/860484efac99/ec2firewall.png
 
 
 Local machine
