@@ -1,7 +1,7 @@
 Overview
 ========
 
-fabric script that installs graphite-trunk and statsd on an Amazon EC2 linux instance.
+fabric script that installs graphite-trunk and Etsy's statsd on an Amazon EC2 linux instance.
 
 On the way, it installs all of graphite's dependencies: http://graphite.readthedocs.org/en/latest/install.html
 
@@ -40,6 +40,8 @@ The keypair need to be available in your local ``.ssh`` directory, you should be
 
 Then just invoke
 
-$ fab ec2 setup
+::
+
+    $ fab ec2 setup
 
 in the directory that contains this file.
