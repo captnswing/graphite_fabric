@@ -2,39 +2,30 @@
 # -*- coding: utf-8 -*-
 """
 Author:     Frank Hoffsümmer
-Disclaimer: this code works on my machine (tm)
+Purpose:    Install graphite & statsd on a remote Amazon EC2 linux instance
+Disclaimer: this code works on my machines (tm)
+Usage:
+            fab -i <path to EC2 .pem> -H <EC2 hostname> setup
+
+            fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:start
+            fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:stop
+            fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:status
+
 """
 from fabric.api import *
 from fabric.context_managers import cd
 from fabric.contrib.files import sed, exists
 import urllib2
+import sys
 
-EC2_HOSTNAME = 'ec2-46-137-133-140.eu-west-1.compute.amazonaws.com'
-EC2_KEYPAIR = '/Users/frank/.ssh/svti-frank.pem'
-
-def ec2():
-    """
-    configuration parameters for an Amazon EC2 standard Linux instance.
-    """
-    # the ec2 instance needs to be configured with an ec2 security group
-    # that allows for tcp/ip traffic on ports
-    # 22 (ssh), 80 (http), 443 (https), 2003 (graphite-carbon)
-    # and udp traffic on port
-    # 8125 (statsd)
-    #
-    # the ec2 hostname
-    env.hosts = [EC2_HOSTNAME]
-    # this is the username on any standard amazon linux ami instance
-    env.user = 'ec2-user'
-    # local path to the keypair the ec2 instance was configured with
-    env.key_filename = EC2_KEYPAIR
-    # location of the virtualenvs
-    env.virtualenv_home = '/opt/virtualenvs'
-    # name of the virtualenv we're using here
-    env.venv_name = 'base'
-    # python 2.6 that follows with the standard amazon linux ami is fine
-    env.python = '/usr/bin/python'
-    env.graphite_host = env.hosts[0]
+# this is the username on any standard amazon linux ami instance
+env.user = 'ec2-user'
+# location of the virtualenvs
+env.virtualenv_home = '/opt/virtualenvs'
+# name of the virtualenv we're using here
+env.venv_name = 'base'
+# python 2.6 that follows with the standard amazon linux ami is fine
+env.python = '/usr/bin/python'
 
 def install_mod_wsgi():
     """
@@ -209,7 +200,7 @@ def configure_services():
     sed('/etc/supervisord.conf', '@PYTHON@', python, use_sudo=True)
     # statsd config
     sudo('rm /etc/statsd.js; ln -s /opt/config/etc/statsd.js /etc/statsd.js')
-    sed('/etc/statsd.js', '@GRAPHITE_HOST@', env.graphite_host, use_sudo=True)
+    sed('/etc/statsd.js', '@GRAPHITE_HOST@', env.hosts[0], use_sudo=True)
     # fix permissions
     if exists('~/.virtualenvs'):
         sudo('chown -R %(user)s /home/%(user)s/.virtualenvs' % env)
@@ -223,18 +214,10 @@ def start_supervisord():
         sudo('pip install supervisor')
     sudo('/usr/bin/supervisord')
 
-def start_services():
+def check_graphite():
     """
-    starts the configured services and keeps them running.
+    see if the graphite is responding to a basic request
     """
-    sudo('/usr/bin/supervisorctl start graphite:*')
-    check_services()
-
-def check_services():
-    """
-    see if the configured services are running.
-    """
-    sudo('/usr/bin/supervisorctl status')
     # derive url of an graphite image
     with hide('running', 'stdout'):
         hostname = run('uname -n')
@@ -251,18 +234,23 @@ def check_services():
     except urllib2.URLError, e:
         print "could not fetch graphite image: %s" % e.reason
 
-def stop_services():
-    """
-    takes the configured services down nicely.
-    """
-    sudo('/usr/bin/supervisorctl stop graphite:*')
-    check_services()
+@task
+def graphite(command=""):
+    """starts & stops the graphite services and displays their status"""
+    if command.lower() not in ['start', 'stop', 'status']:
+        print "use graphite:start, graphite:stop or graphite:status"
+        sys.exit(-1)
+    sudo('/usr/bin/supervisorctl %s graphite:*' % command.lower())
+    if command.lower() != "status":
+        sudo('/usr/bin/supervisorctl status graphite:*')
+    if command.lower() != "stop":
+        check_graphite()
 
-def setup():
+@task
+def setup(host):
     """
-    performs the required steps to install statsd and graphite.
+    installs graphite and statsd on the remote EC2 host
     """
-    require('hosts', provided_by=[ ec2 ])
     sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
     install_dtach()
     install_nodejs()
@@ -274,4 +262,4 @@ def setup():
     install_statsd()
     configure_services()
     start_supervisord()
-    check_services()
+    check_graphite()

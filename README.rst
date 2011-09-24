@@ -14,12 +14,12 @@ Amazon EC2
 Suitable Amazon EC2 linux instance (I use ``Basic 64-bit Amazon Linux AMI 2011.02.1 Beta``)
 
 .. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/default/ec2instance.png
-    :width: 600 px
+    :width: 800 px
 
 The instance need to be configured with a security group that has the necessary UDP / TCP ports opened.
 
 .. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/default/ec2firewall.png
-    :width: 400 px
+    :width: 500 px
 
 
 Local machine
@@ -34,17 +34,18 @@ On your local machine, you need python2 >= 2.6 and python-fabric_
 Installing graphite with this fabfile
 =====================================
 
-Once fabric is installed, and the ec2 instance is running, just paste the hostname of the
-instance into the ``EC2_HOSTNAME`` variable at the top of the script.
+Once fabric is installed, and the ec2 instance is running,
+test that you are able to ssh into your EC2 instance, using something like
 
-Also, change the name of the keypair used to create the instance in the ``EC2_KEYPAIR`` variable.
-The keypair need to be available in your local ``.ssh`` directory, you should be able to ssh into your instance before proceeding.
+::
+
+    ssh -i ~/.ssh/myec2key.pem ec2-user@ec2-xxx-xxx-xxx-xxx.eu-west-1.compute.amazonaws.com
 
 Then just invoke
 
 ::
 
-    fab ec2 setup
+    fab -i <path to EC2 .pem> -H <EC2 hostname> setup
 
 in the directory that contains this file.
 
@@ -57,14 +58,14 @@ You can check the status of these services by invoking
 
 ::
 
-    fab ec2 check_services
+    fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:status
 
 Also
 
 ::
 
-    fab ec2 stop_services
-    fab ec2 start_services
+    fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:stop
+    fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:start
 
 does what you think it does.
 
