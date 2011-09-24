@@ -246,7 +246,6 @@ def graphite(command=""):
         sudo('/usr/bin/supervisorctl status')
     else:
         sudo('/usr/bin/supervisorctl %s graphite:*' % command.lower())
-        sudo('/usr/bin/supervisorctl status graphite:*')
     if command.lower() != "stop":
         check_graphite()
 
