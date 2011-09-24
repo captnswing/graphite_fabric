@@ -43,18 +43,12 @@ def install_mod_wsgi():
 
 def configure_shell():
     """
-    fetches all config files from bitbucket,
-    and links the shell related config files into place.
+    fetches shell related config files from bitbucket, and puts them in place
     """
-    run('wget https://bitbucket.org/captnswing/graphite_fabfile/get/tip.tar.gz')
-    run('tar xfz tip.tar.gz')
-    with cd('captnswing-graphite_fabfile-*'):
-        # move config directory tree into /opt
-        sudo('rm -rf /opt/config; mv config /opt/')
-    run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
-    # link shell config files into place
-    run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
-    run('rm ~/.bashrc; ln -s /opt/config/bashrc ~/.bashrc')
+    # fetch shell config files
+    run('wget -q -O .screenrc https://bitbucket.org/captnswing/graphite_fabfile/src/default/config/screenrc')
+    run('wget -q -O .bashrc https://bitbucket.org/captnswing/graphite_fabfile/src/default/config/bashrc')
+    # change placeholder variable
     sed('~/.bashrc', '@PYTHON@', env.python)
 
 def install_virtualenv():
@@ -176,9 +170,17 @@ def install_graphite():
 
 def configure_services():
     """
-    symlinks configfiles under /opt/config tree into place.
+    downloads & extracts /opt/config tree from bitbucket
+    symlinks configfiles under /opt/config into place.
     changes placeholder variables in them to correct values.
     """
+    with cd('/tmp'):
+        run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
+        run('wget https://bitbucket.org/captnswing/graphite_fabfile/get/tip.tar.gz')
+        run('tar xfz tip.tar.gz')
+        with cd('captnswing-graphite_fabfile-*'):
+            # move config directory tree into /opt
+            sudo('rm -rf /opt/config; mv config /opt/')
     # find out pathes
     with prefix('workon %(venv_name)s' % env):
         python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
