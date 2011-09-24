@@ -221,7 +221,7 @@ def check_graphite():
     # derive url of an graphite image
     with hide('running', 'stdout'):
         hostname = run('uname -n')
-    image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.graphite_host, hostname)
+    image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.hosts[0], hostname)
     # open the image
     try:
         response = urllib2.urlopen(image_url)
@@ -240,14 +240,16 @@ def graphite(command=""):
     if command.lower() not in ['start', 'stop', 'status']:
         print "use graphite:start, graphite:stop or graphite:status"
         sys.exit(-1)
-    sudo('/usr/bin/supervisorctl %s graphite:*' % command.lower())
-    if command.lower() != "status":
+    if command.lower() == "status":
+        sudo('/usr/bin/supervisorctl status')
+    else:
+        sudo('/usr/bin/supervisorctl %s graphite:*' % command.lower())
         sudo('/usr/bin/supervisorctl status graphite:*')
     if command.lower() != "stop":
         check_graphite()
 
 @task
-def setup(host):
+def setup():
     """
     installs graphite and statsd on the remote EC2 host
     """
