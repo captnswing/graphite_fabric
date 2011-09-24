@@ -9,7 +9,7 @@ from fabric.context_managers import cd
 from fabric.contrib.files import sed, exists
 import urllib2
 
-EC2_HOSTNAME = 'ec2-46-137-57-226.eu-west-1.compute.amazonaws.com'
+EC2_HOSTNAME = 'ec2-46-137-133-140.eu-west-1.compute.amazonaws.com'
 EC2_KEYPAIR = '/Users/frank/.ssh/svti-frank.pem'
 
 def ec2():
@@ -121,9 +121,11 @@ def install_nodejs():
 def install_statsd():
     sudo('mkdir -p /opt/statsd')
     with cd('/tmp/'):
+        sudo('rm -rf statsd')
         run('git clone https://github.com/etsy/statsd.git')
         with cd('statsd'):
             sudo('mv stats.js /opt/statsd/')
+            sudo('mv config.js /opt/statsd/')
 
 def install_cairo():
     """
@@ -163,7 +165,7 @@ def install_graphite():
     run('bzr branch lp:graphite')
     with prefix('workon %(venv_name)s' % env):
         # install some dependencies
-        run('pip install python-memcached simplejson django django-tagging')
+        run('pip install python-memcached django django-tagging')
         with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
             # install graphite from trunk - less bugs
             with cd('graphite'):
