@@ -35,9 +35,9 @@ Running the script
 ==================
 
 once fabric is installed, and the ec2 instance is running, just paste the hostname of the
-instance into the ec2 function's ``env.hosts`` variable.
+instance into the ``EC2_HOSTNAME`` variable at the top of the script.
 
-Also, change the name of the keypair used to create the instance in the ec2 function's ``env.key_filename`` variable.
+Also, change the name of the keypair used to create the instance in the ``EC2_KEYPAIR`` variable.
 The keypair need to be available in your local ``.ssh`` directory, you should be able to ssh into your instance before proceeding.
 
 Then just invoke

@@ -7,6 +7,7 @@ Disclaimer: this code works on my machine (tm)
 from fabric.api import *
 from fabric.context_managers import cd
 from fabric.contrib.files import sed, exists
+import urllib2
 
 EC2_HOSTNAME = 'ec2-46-137-57-226.eu-west-1.compute.amazonaws.com'
 EC2_KEYPAIR = '/Users/frank/.ssh/svti-frank.pem'
@@ -21,7 +22,7 @@ def ec2():
     # and udp traffic on port
     # 8125 (statsd)
     #
-    # put the ec2 hostname in here
+    # the ec2 hostname
     env.hosts = [EC2_HOSTNAME]
     # this is the username on any standard amazon linux ami instance
     env.user = 'ec2-user'
@@ -59,6 +60,7 @@ def configure_shell():
     with cd('captnswing-graphite_fabfile-*'):
         # move config directory tree into /opt
         sudo('rm -rf /opt/config; mv config /opt/')
+        sudo('rm -rf /opt/statsd; mv statsd /opt/')
     run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
     # link shell config files into place
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
@@ -73,12 +75,10 @@ def install_virtualenv():
     if exists('/usr/local/bin/virtualenvwrapper.sh') or exists('/usr/bin/virtualenvwrapper.sh'):
         return
     with cd('/tmp'):
-        run('wget http://python-distribute.org/distribute_setup.py')
-        sudo('%(python)s distribute_setup.py' % env)
-    with prefix('export VIRTUALENVWRAPPER_PYTHON=%(python)s && unset PIP_REQUIRE_VIRTUALENV' % env):
-        sudo('/usr/bin/easy_install -U pip')
-        sudo('/usr/bin/pip install -U virtualenv virtualenvwrapper')
-        run('/usr/bin/virtualenvwrapper.sh')
+        with prefix('export VIRTUALENVWRAPPER_PYTHON=%(python)s && unset PIP_REQUIRE_VIRTUALENV' % env):
+            sudo('curl -o - https://raw.github.com/pypa/pip/master/contrib/get-pip.py | %(python)s' % env)
+            sudo('/usr/bin/pip install -U virtualenv virtualenvwrapper')
+            run('/usr/bin/virtualenvwrapper.sh')
     sudo('chown -R %(user)s %(virtualenv_home)s' % env)
     # create virtualenv env.venv_name
     with cd('%(virtualenv_home)s' % env):
@@ -211,48 +211,43 @@ def start_supervisord():
     starts supervisord (installs it first, if not present).
     this starts all the configured services as well.
     """
-    if not exists('/opt/virtualenvs/%(venv_name)s/bin/supervisord' % env):
-        with prefix('workon %(venv_name)s' % env):
-            run('pip install supervisor')
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisord' % env)
+    if not exists('/usr/bin/supervisord'):
+        sudo('pip install supervisor')
+    sudo('/usr/bin/supervisord')
 
 def start_services():
     """
     starts the configured services and keeps them running.
     """
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start apache' % env)
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start carbon' % env)
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl start node' % env)
+    sudo('/usr/bin/supervisorctl start graphite:*')
     check_services()
 
 def check_services():
     """
     see if the configured services are running.
     """
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl status' % env)
+    sudo('/usr/bin/supervisorctl status')
     # derive url of an graphite image
     with hide('running', 'stdout'):
         hostname = run('uname -n')
     image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.graphite_host, hostname)
-    print image_url
     # open the image
-    import urllib2
-    req = urllib2.Request(image_url)
-    # check the response code
-    response = urllib2.urlopen(req)
-    # tell it like it is
-    if response.getcode() == 200:
-        print "graphite seems to be running"
-    else:
-        print "something wrong with graphite installation"
+    try:
+        response = urllib2.urlopen(image_url)
+        # check the response code
+        # tell it like it is
+        if response.getcode() == 200:
+            print "graphite seems to be running"
+        else:
+            print "something wrong with graphite installation"
+    except urllib2.URLError, e:
+        print "could not fetch graphite image: %s" % e.reason
 
 def stop_services():
     """
     takes the configured services down nicely.
     """
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop apache' % env)
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop carbon' % env)
-    sudo('/opt/virtualenvs/%(venv_name)s/bin/supervisorctl stop node' % env)
+    sudo('/usr/bin/supervisorctl stop graphite:*')
     check_services()
 
 def setup():
