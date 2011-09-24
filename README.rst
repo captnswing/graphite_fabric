@@ -1,9 +1,17 @@
 Introduction
 ============
 
-fabric script that installs graphite-trunk and Etsy's statsd on an Amazon EC2 linux instance.
+Inspired by Etsy's seminal blogpost `Measure anything, measure everything` I set out to install Graphite_ and statsd_ myself.
+It turned out to be quite a bit more complex than
 
-On the way, it installs all of graphite's dependencies_ (taking some clues from `Grig Gheorghiu`_)
+::
+
+    sudo yum -y install graphite statsd     # I wish...
+
+This fabric script is the result of trying to capture my efforts getting everything working together and up and running.
+The script automatically installs statsd as well as Graphite and its dependencies_ on an Amazon EC2 linux instance (taking some clues from `Grig Gheorghiu`_)
+
+Works on my machines, YMMV!
 
 Prerequisits
 ============
@@ -80,7 +88,9 @@ Check out the graphite / statsd clients here
 * https://github.com/bvandenbos/statsd-client
 * many more...
 
-.. _python-fabric:  http://docs.fabfile.org
+.. _Graphite: http://graphite.wikidot.com/
+.. _statsd: https://github.com/etsy/statsd/
+.. _python-fabric: http://docs.fabfile.org
 .. _dependencies: http://graphite.readthedocs.org/en/latest/install.html
 .. _Grig Gheorghiu: http://agiletesting.blogspot.com/2011/04/installing-and-configuring-graphite.html
 
