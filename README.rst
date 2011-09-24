@@ -1,15 +1,20 @@
 Introduction
 ============
 
-Inspired by Etsy's seminal blogpost `Measure anything, measure everything`_ I set out to install Graphite_ and statsd_ myself.
-It turned out to be quite a bit more complex than
+Inspired by Etsy's seminal blogpost `Measure anything, measure everything`_,
+I set out to install Graphite_ and statsd_ myself.
+
+It turned out to be quite a bit more involved than
 
 ::
 
-    sudo yum -y install graphite statsd     # I wish...
+    sudo yum -y install graphite statsd     # yeah I wish...
 
-This fabric script is the result of trying to capture my efforts getting everything working together and up and running.
-The script automatically installs statsd as well as Graphite and its dependencies_ on an Amazon EC2 linux instance (taking some clues from `Grig Gheorghiu`_)
+This fabric script is the result of my effort to trace my steps while trying to get everything
+work together and up and running (I took some clues from `Grig Gheorghiu`_).
+
+I use the script to automatically install statsd and Graphite (and its dependencies_)
+from trunk on any standard Amazon EC2 linux instance.
 
 Works on my machines, YMMV!
 
@@ -19,7 +24,8 @@ Prerequisits
 Amazon EC2
 ----------
 
-Suitable Amazon EC2 linux instance (I use ``Basic 64-bit Amazon Linux AMI 2011.02.1 Beta``)
+Suitable Amazon EC2 linux instance (I often use ``Basic 64-bit Amazon Linux AMI 2011.02.1 Beta``
+on an ``m1.large`` machine)
 
 .. image:: https://bitbucket.org/captnswing/graphite_fabfile/raw/default/ec2instance.png
     :width: 800 px
@@ -33,7 +39,7 @@ The instance need to be configured with a security group that has the necessary 
 Local machine
 -------------
 
-On your local machine, you need python2 >= 2.6 and python-fabric_
+On your local machine, you need mercurial, python2 >= 2.6 and python-fabric_
 
 ::
 
@@ -53,9 +59,8 @@ Then just invoke
 
 ::
 
+    curl -O https://bitbucket.org/captnswing/graphite_fabfile/raw/default/fabfile.py
     fab -i <path to EC2 .pem> -H <EC2 hostname> setup
-
-in the directory that contains this file.
 
 Starting & stopping graphite
 ----------------------------
@@ -88,9 +93,9 @@ Check out the graphite / statsd clients here
 * https://github.com/bvandenbos/statsd-client
 * many more...
 
-.. _Measure anything, measure everything: http://codeascraft.etsy.com/2011/02/15/measure-anything-measure-everything/
-.. _Graphite: http://graphite.wikidot.com/
-.. _statsd: https://github.com/etsy/statsd/
+.. _Measure anything, measure everything: http://codeascraft.etsy.com/2011/02/15/measure-anything-measure-everything
+.. _Graphite: http://graphite.wikidot.com
+.. _statsd: http://github.com/etsy/statsd
 .. _python-fabric: http://docs.fabfile.org
 .. _dependencies: http://graphite.readthedocs.org/en/latest/install.html
 .. _Grig Gheorghiu: http://agiletesting.blogspot.com/2011/04/installing-and-configuring-graphite.html
