@@ -1,7 +1,7 @@
 Introduction
 ============
 
-Inspired by Etsy's seminal blogpost `Measure anything, measure everything` I set out to install Graphite_ and statsd_ myself.
+Inspired by Etsy's seminal blogpost `Measure anything, measure everything`_ I set out to install Graphite_ and statsd_ myself.
 It turned out to be quite a bit more complex than
 
 ::
@@ -88,6 +88,7 @@ Check out the graphite / statsd clients here
 * https://github.com/bvandenbos/statsd-client
 * many more...
 
+.. _Measure anything, measure everything: http://codeascraft.etsy.com/2011/02/15/measure-anything-measure-everything/
 .. _Graphite: http://graphite.wikidot.com/
 .. _statsd: https://github.com/etsy/statsd/
 .. _python-fabric: http://docs.fabfile.org
