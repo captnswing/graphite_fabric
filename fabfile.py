@@ -60,7 +60,6 @@ def configure_shell():
     with cd('captnswing-graphite_fabfile-*'):
         # move config directory tree into /opt
         sudo('rm -rf /opt/config; mv config /opt/')
-        sudo('rm -rf /opt/statsd; mv statsd /opt/')
     run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
     # link shell config files into place
     run('rm ~/.screenrc; ln -s /opt/config/screenrc ~/.screenrc')
@@ -118,6 +117,13 @@ def install_nodejs():
             # on different methods how to detach long running processes on the target host with fabric
             # I couldn't get screen -d -m to work though. hence 'dtach', which works fine
             sudo('/usr/local/bin/dtach -n /tmp/node make install')
+
+def install_statsd():
+    sudo('mkdir -p /opt/statsd')
+    with cd('/tmp/'):
+        run('git clone https://github.com/etsy/statsd.git')
+        with cd('statsd'):
+            sudo('mv stats.js /opt/statsd/')
 
 def install_cairo():
     """
@@ -255,7 +261,7 @@ def setup():
     performs the required steps to install statsd and graphite.
     """
     require('hosts', provided_by=[ ec2 ])
-    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel')
+    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
     install_dtach()
     install_nodejs()
     install_cairo()
@@ -263,6 +269,7 @@ def setup():
     configure_shell()
     install_virtualenv()
     install_graphite()
+    install_statsd()
     configure_services()
     start_supervisord()
     check_services()
