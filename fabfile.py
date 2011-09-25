@@ -171,12 +171,14 @@ def install_graphite():
 
 @task
 def get_configfile(filepath):
-    config_root = "https://bitbucket.org/captnswing/graphite_fabfile/raw/default/config/"
     directory = os.path.dirname(filepath)
     if directory == '~':
         directory = run('pwd')
-    sudo('cd %s; curl -s -O %s' %
-         (directory, config_root+filepath.lstrip('~').lstrip('/')))
+    # all config files are saved under the /config/ tree hierarchy in the bitbucket source repository
+    config_root = "https://bitbucket.org/captnswing/graphite_fabfile/raw/default/config/"
+    # convention: config files directly under the /config/ dir are copied to the remote users home dir
+    bitbucket_source = config_root+filepath.lstrip('~').lstrip('/')
+    sudo('cd %s; curl -s -O %s' % (directory, bitbucket_source))
 
 def configure_services():
     """
