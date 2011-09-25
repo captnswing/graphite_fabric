@@ -169,7 +169,6 @@ def install_graphite():
     # set permissions for the apache process
     sudo('chown -R apache:apache /opt/graphite/storage')
 
-@task
 def get_configfile(filepath):
     directory = os.path.dirname(filepath)
     if directory == '~':
