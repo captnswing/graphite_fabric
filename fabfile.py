@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 Author:     Frank Hoffsümmer
-Purpose:    Install graphite & statsd on a remote Amazon EC2 linux instance
+Purpose:    Install graphite & statsd from trunk on a remote Amazon EC2 linux instance
 Disclaimer: this code works on my machines (tm)
 Usage:
+            # setup the Amazon EC2 machine with graphite and statsd
             fab -i <path to EC2 .pem> -H <EC2 hostname> setup
 
+            # start / stop / check the statsd and graphite services
             fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:start
             fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:stop
             fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:status
@@ -30,7 +32,7 @@ env.python = '/usr/bin/python'
 
 def install_mod_wsgi():
     """
-    installs mod_wsgi 3.3.
+    installs mod_wsgi 3.3
     """
     if exists('/usr/lib64/httpd/modules/mod_wsgi.so') or exists('/usr/lib/httpd/modules/mod_wsgi.so'):
         return
@@ -38,13 +40,14 @@ def install_mod_wsgi():
         run('wget http://modwsgi.googlecode.com/files/mod_wsgi-3.3.tar.gz')
         run('tar -xzvf mod_wsgi-3.3.tar.gz')
         with cd('mod_wsgi-3.3'):
-            run('./configure -with-python=%(python)s' % env)
+            run('./configure -with-python={python:>s}'.format(env))
             sudo('make install')
         sudo('rm -rf mod_wsgi-3.3.tar.gz mod_wsgi-3.3')
 
+
 def configure_shell():
     """
-    fetches shell related config files from bitbucket, and puts them in place
+    fetches shell config files from bitbucket, and puts them in the ec2-user's home directory
     """
     # fetch shell config files
     get_configfile('~/.screenrc')
@@ -52,40 +55,44 @@ def configure_shell():
     # change placeholder variable
     sed('~/.bashrc', '@PYTHON@', env.python, use_sudo=True)
 
+
 def install_virtualenv():
     """
-    installs virtualenv and virtualenvwrapper.
+    installs virtualenv and virtualenvwrapper
     """
-    sudo('mkdir -p %(virtualenv_home)s' % env)
+    sudo('mkdir -p {virtualenv_home:>s}'.format(env))
     if exists('/usr/local/bin/virtualenvwrapper.sh') or exists('/usr/bin/virtualenvwrapper.sh'):
         return
     with cd('/tmp'):
-        with prefix('export VIRTUALENVWRAPPER_PYTHON=%(python)s && unset PIP_REQUIRE_VIRTUALENV' % env):
-            sudo('curl -o - https://raw.github.com/pypa/pip/master/contrib/get-pip.py | %(python)s' % env)
+        with prefix('export VIRTUALENVWRAPPER_PYTHON={python:>s} && unset PIP_REQUIRE_VIRTUALENV'.format(env)):
+            sudo('curl -o - https://raw.github.com/pypa/pip/master/contrib/get-pip.py | {python:>s}'.format(env))
             sudo('/usr/bin/pip install -U virtualenv virtualenvwrapper')
             run('/usr/bin/virtualenvwrapper.sh')
-    sudo('chown -R %(user)s %(virtualenv_home)s' % env)
+    sudo('chown -R {user:>s} {virtualenv_home:>s}'.format(env))
     # create virtualenv env.venv_name
-    with cd('%(virtualenv_home)s' % env):
-        run('mkvirtualenv --no-site-packages %(venv_name)s' % env)
+    with cd('{virtualenv_home:>s}'.format(env)):
+        run('mkvirtualenv --no-site-packages {venv_name:>s}'.format(env))
+
 
 def install_dtach():
     """
-    installs dtach, to speed things up.
+    installs dtach, to speed things up
     """
     if exists('/usr/local/bin/dtach'):
         return
     with cd('/tmp/'):
-        run('curl -L http://sourceforge.net/projects/dtach/files/dtach/0.8/dtach-0.8.tar.gz/download -o dtach-0.8.tar.gz')
+        run(
+            'curl -L http://sourceforge.net/projects/dtach/files/dtach/0.8/dtach-0.8.tar.gz/download -o dtach-0.8.tar.gz')
         run('tar xfz dtach-0.8.tar.gz')
         with cd('dtach-0.8'):
             run('./configure')
             sudo('make')
             sudo('mv dtach /usr/local/bin/')
 
+
 def install_nodejs():
     """
-    installs node.js from latest trunk.
+    installs node.js from trunk
     """
     if exists('/usr/local/bin/node'):
         return
@@ -104,6 +111,7 @@ def install_nodejs():
             # I couldn't get screen -d -m to work though. hence 'dtach', which works fine
             sudo('/usr/local/bin/dtach -n /tmp/node make install')
 
+
 def install_statsd():
     sudo('mkdir -p /opt/statsd')
     with cd('/tmp/'):
@@ -113,9 +121,10 @@ def install_statsd():
             sudo('mv stats.js /opt/statsd/')
             sudo('mv config.js /opt/statsd/')
 
+
 def install_cairo():
     """
-    installs latest version of pixman and cairo backend.
+    installs latest version of pixman and cairo backend
     """
     # graphite is not satisfied with versions available through "yum install"
     if exists('/usr/local/lib/libcairo.so'):
@@ -130,7 +139,7 @@ def install_cairo():
             with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
                 run('./configure')
             sudo('make install')
-        # install cairo
+            # install cairo
         sudo('rm -rf cairo*')
         run('wget http://cairographics.org/releases/cairo-1.10.2.tar.gz')
         run('tar xfz cairo-1.10.2.tar.gz')
@@ -139,17 +148,18 @@ def install_cairo():
                 run('./configure --enable-xlib=no --disable-gobject')
             sudo('make install')
 
+
 def install_graphite():
     """
     installs graphite from trunk. because 0.9.8 has some bugs.
     """
     # create target dir with correct permissions
     sudo('test -e /opt/graphite || mkdir /opt/graphite')
-    sudo('chown -R %(user)s /opt/graphite' % env)
+    sudo('chown -R {user:>s} /opt/graphite'.format(env))
     # cannot download an arbitrary version as tarball from launchpad https://bugs.launchpad.net/loggerhead/+bug/240580
     sudo('rm -rf graphite')
     run('bzr branch lp:graphite')
-    with prefix('workon %(venv_name)s' % env):
+    with prefix('workon {venv_name:>s}'.format(env)):
         # install some dependencies
         run('pip install python-memcached django django-tagging')
         with prefix('export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/local/lib/pkgconfig'):
@@ -169,24 +179,31 @@ def install_graphite():
     # set permissions for the apache process
     sudo('chown -R apache:apache /opt/graphite/storage')
 
+
 def get_configfile(filepath):
+    """
+    fetches config files from /opt/config/ tree on bitbucket and puts them into place on the remote machine
+    """
     directory = os.path.dirname(filepath)
     if directory == '~':
+        # get the home directory of the remote user
         directory = run('pwd')
     # all config files are saved under the /config/ tree hierarchy in the bitbucket source repository
     config_root = "https://bitbucket.org/captnswing/graphite_fabfile/raw/default/config/"
     # convention: config files directly under the /config/ dir are copied to the remote users home dir
-    bitbucket_source = config_root+filepath.lstrip('~').lstrip('/')
+    bitbucket_source = config_root + filepath.lstrip('~').lstrip('/')
     sudo('cd %s; curl -s -O %s' % (directory, bitbucket_source))
+
 
 def configure_services():
     """
     downloads & puts in place config files from bitbucket
-    changes placeholder variables in them to correct values.
+    changes placeholder variables in them to correct values
     """
     # find out pathes
-    with prefix('workon %(venv_name)s' % env):
-        python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
+    with prefix('workon {venv_name:>s}'.format(env)):
+        python_root = run(
+            """python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
         python = run("which python")
     # graphite config
@@ -208,7 +225,8 @@ def configure_services():
     sed('/etc/statsd.js', '@GRAPHITE_HOST@', env.hosts[0], use_sudo=True)
     # fix permissions
     if exists('~/.virtualenvs'):
-        sudo('chown -R %(user)s /home/%(user)s/.virtualenvs' % env)
+        sudo('chown -R {user:>s} /home/{user:>s}/.virtualenvs'.format(env))
+
 
 def start_supervisord():
     """
@@ -218,6 +236,7 @@ def start_supervisord():
     if not exists('/usr/bin/supervisord'):
         sudo('pip install supervisor')
     sudo('/usr/bin/supervisord')
+
 
 def check_graphite():
     """
@@ -239,9 +258,12 @@ def check_graphite():
     except urllib2.URLError, e:
         print "could not fetch graphite image: %s" % e.reason
 
+
 @task
 def graphite(command=""):
-    """starts & stops the graphite services and displays their status"""
+    """
+    starts & stops the graphite services and displays their status
+    """
     if command.lower() not in ['start', 'stop', 'status']:
         print "use graphite:start, graphite:stop or graphite:status"
         sys.exit(-1)
@@ -251,6 +273,7 @@ def graphite(command=""):
         sudo('/usr/bin/supervisorctl %s graphite:*' % command.lower())
     if command.lower() != "stop":
         check_graphite()
+
 
 @task
 def setup():
