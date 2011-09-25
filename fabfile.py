@@ -187,7 +187,6 @@ def configure_services():
         python = run("which python")
     # graphite config
     get_configfile('/opt/graphite/conf/graphite.wsgi')
-    get_configfile('~/..screenrc')
     get_configfile('/opt/graphite/conf/storage-schemas.conf')
     get_configfile('/opt/graphite/conf/dashboard.conf')
     get_configfile('/opt/graphite/conf/carbon.conf')
