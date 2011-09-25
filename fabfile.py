@@ -17,8 +17,9 @@ from fabric.context_managers import cd
 from fabric.contrib.files import sed, exists
 import urllib2
 import sys
+import os
 
-# this is the username on any standard amazon linux ami instance
+
 env.user = 'ec2-user'
 # location of the virtualenvs
 env.virtualenv_home = '/opt/virtualenvs'
@@ -46,10 +47,10 @@ def configure_shell():
     fetches shell related config files from bitbucket, and puts them in place
     """
     # fetch shell config files
-    run('wget -q -O .screenrc https://bitbucket.org/captnswing/graphite_fabfile/src/default/config/screenrc')
-    run('wget -q -O .bashrc https://bitbucket.org/captnswing/graphite_fabfile/src/default/config/bashrc')
+    get_configfile('~/.screenrc')
+    get_configfile('~/.bashrc')
     # change placeholder variable
-    sed('~/.bashrc', '@PYTHON@', env.python)
+    sed('~/.bashrc', '@PYTHON@', env.python, use_sudo=True)
 
 def install_virtualenv():
     """
@@ -168,40 +169,39 @@ def install_graphite():
     # set permissions for the apache process
     sudo('chown -R apache:apache /opt/graphite/storage')
 
+def get_configfile(filepath):
+    config_root = "https://bitbucket.org/captnswing/graphite_fabfile/raw/default/config/"
+    directory = os.path.expanduser(os.path.dirname(filepath))
+    sudo('cd %s; curl -s -O %s' %
+         (directory, config_root+filepath.lstrip('~').lstrip('/')))
+
 def configure_services():
     """
-    downloads & extracts /opt/config tree from bitbucket
-    symlinks configfiles under /opt/config into place.
+    downloads & puts in place config files from bitbucket
     changes placeholder variables in them to correct values.
     """
-    with cd('/tmp'):
-        run('rm -rf tip.tar* captnswing-graphite_fabfile-*')
-        run('wget https://bitbucket.org/captnswing/graphite_fabfile/get/tip.tar.gz')
-        run('tar xfz tip.tar.gz')
-        with cd('captnswing-graphite_fabfile-*'):
-            # move config directory tree into /opt
-            sudo('rm -rf /opt/config; mv config /opt/')
     # find out pathes
     with prefix('workon %(venv_name)s' % env):
         python_root = run("""python -c 'from pkg_resources import get_distribution; print get_distribution("django").location'""")
         django_root = run("""cd /; python -c 'print __import__("django").__path__[0]'""")
         python = run("which python")
     # graphite config
-    sudo('rm /opt/graphite/conf/graphite.wsgi; ln -s /opt/config/opt/graphite/conf/graphite.wsgi /opt/graphite/conf/graphite.wsgi')
-    sudo('rm /opt/graphite/conf/storage-schemas.conf; ln -s /opt/config/opt/graphite/conf/storage-schemas.conf /opt/graphite/conf/storage-schemas.conf')
-    sudo('rm /opt/graphite/conf/dashboard.conf; ln -s /opt/config/opt/graphite/conf/dashboard.conf /opt/graphite/conf/dashboard.conf')
-    sudo('rm /opt/graphite/conf/carbon.conf; ln -s /opt/config/opt/graphite/conf/carbon.conf /opt/graphite/conf/carbon.conf')
-    sudo('rm /opt/graphite/webapp/graphite/local_settings.py; ln -s /opt/config/opt/graphite/webapp/graphite/local_settings.py /opt/graphite/webapp/graphite/local_settings.py')
+    get_configfile('/opt/graphite/conf/graphite.wsgi')
+    get_configfile('~/..screenrc')
+    get_configfile('/opt/graphite/conf/storage-schemas.conf')
+    get_configfile('/opt/graphite/conf/dashboard.conf')
+    get_configfile('/opt/graphite/conf/carbon.conf')
+    get_configfile('/opt/graphite/webapp/graphite/local_settings.py')
     # apache2 config
-    sudo('rm /etc/httpd/conf/httpd.conf; ln -s /opt/config/etc/httpd/conf/httpd.conf /etc/httpd/conf/httpd.conf')
-    sudo('rm /etc/httpd/conf.d/graphite.conf; ln -s /opt/config/etc/httpd/conf.d/graphite.conf /etc/httpd/conf.d/graphite.conf')
+    get_configfile('/etc/httpd/conf/httpd.conf')
+    get_configfile('/etc/httpd/conf.d/graphite.conf')
     sed('/etc/httpd/conf.d/graphite.conf', '@DJANGO_ROOT@', django_root, use_sudo=True)
     sed('/etc/httpd/conf.d/graphite.conf', '@PYTHON_ROOT@', python_root, use_sudo=True)
     # supervisord config
-    sudo('rm /etc/supervisord.conf; ln -s /opt/config/etc/supervisord.conf /etc/supervisord.conf')
+    get_configfile('/etc/supervisord.conf')
     sed('/etc/supervisord.conf', '@PYTHON@', python, use_sudo=True)
     # statsd config
-    sudo('rm /etc/statsd.js; ln -s /opt/config/etc/statsd.js /etc/statsd.js')
+    get_configfile('/etc/statsd.js')
     sed('/etc/statsd.js', '@GRAPHITE_HOST@', env.hosts[0], use_sudo=True)
     # fix permissions
     if exists('~/.virtualenvs'):
