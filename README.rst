@@ -16,6 +16,8 @@ work together and up and running (I took some clues from `Grig Gheorghiu`_).
 I use the script to automatically install statsd and Graphite (and its dependencies_)
 from trunk on any standard Amazon EC2 linux instance.
 
+On an ``m1.large`` EC2 instance, this script is finished within 8minutes.
+
 Works on my machines, YMMV!
 
 Prerequisits
