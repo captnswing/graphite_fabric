@@ -169,9 +169,12 @@ def install_graphite():
     # set permissions for the apache process
     sudo('chown -R apache:apache /opt/graphite/storage')
 
+@task
 def get_configfile(filepath):
     config_root = "https://bitbucket.org/captnswing/graphite_fabfile/raw/default/config/"
-    directory = os.path.expanduser(os.path.dirname(filepath))
+    directory = os.path.dirname(filepath)
+    if directory == '~':
+        directory = run('pwd')
     sudo('cd %s; curl -s -O %s' %
          (directory, config_root+filepath.lstrip('~').lstrip('/')))
 
