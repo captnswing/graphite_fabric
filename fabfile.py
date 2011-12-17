@@ -30,6 +30,19 @@ env.venv_name = 'base'
 # python 2.6 that follows with the standard amazon linux ami is fine
 env.python = '/usr/bin/python'
 
+@task
+def labmanager():
+    env.hosts = ['10.20.61.14']
+    env.user = 'si'
+    env.password = 'si'
+    # root dir for virtualenvs on the remote machine
+    env.virtualenv_home = '/opt/virtualenvs'
+    # name of the virtualenv we're using here
+    env.venv_name = 'base'
+    # link to python 2.6
+    env.python = '/usr/local/bin/python'
+
+
 def install_mod_wsgi():
     """
     installs mod_wsgi 3.3
@@ -49,18 +62,19 @@ def install_virtualenv():
     """
     installs virtualenv and virtualenvwrapper
     """
+    sudo('yum -y -q install python26-distribute')
     sudo('mkdir -p {0.virtualenv_home:>s}'.format(env))
     if exists('/usr/local/bin/virtualenvwrapper.sh') or exists('/usr/bin/virtualenvwrapper.sh'):
         return
-    with cd('/tmp'):
-        with prefix('export VIRTUALENVWRAPPER_PYTHON={0.python:>s} && unset PIP_REQUIRE_VIRTUALENV'.format(env)):
+    with prefix('export VIRTUALENVWRAPPER_PYTHON={0.python:>s} && unset PIP_REQUIRE_VIRTUALENV'.format(env)):
+        with cd('/tmp'):
             sudo('curl -o - https://raw.github.com/pypa/pip/master/contrib/get-pip.py | {0.python:>s}'.format(env))
             sudo('/usr/bin/pip install -U virtualenv virtualenvwrapper')
             run('/usr/bin/virtualenvwrapper.sh')
-    sudo('chown -R {0.user:>s} {0.virtualenv_home:>s}'.format(env))
-    # create virtualenv env.venv_name
-    with cd('{0.virtualenv_home:>s}'.format(env)):
-        run('mkvirtualenv --no-site-packages {0.venv_name:>s}'.format(env))
+        sudo('chown -R {0.user:>s} {0.virtualenv_home:>s}'.format(env))
+        # create virtualenv env.venv_name
+        with cd('{0.virtualenv_home:>s}'.format(env)):
+            run('mkvirtualenv --no-site-packages {0.venv_name:>s}'.format(env))
 
 
 def install_dtach():
@@ -70,8 +84,7 @@ def install_dtach():
     if exists('/usr/local/bin/dtach'):
         return
     with cd('/tmp/'):
-        run('curl -L http://sourceforge.net/projects/dtach/files/dtach/0.8/dtach-0.8.tar.gz/download '\
-            '-o dtach-0.8.tar.gz')
+        run('curl -L http://sourceforge.net/projects/dtach/files/dtach/0.8/dtach-0.8.tar.gz/download -o dtach-0.8.tar.gz')
         run('tar xfz dtach-0.8.tar.gz')
         with cd('dtach-0.8'):
             run('./configure')
@@ -105,7 +118,7 @@ def install_statsd():
     sudo('mkdir -p /opt/statsd')
     with cd('/tmp/'):
         sudo('rm -rf statsd')
-        run('git clone https://github.com/etsy/statsd.git')
+        run('env GIT_SSL_NO_VERIFY=true git clone https://github.com/etsy/statsd.git')
         with cd('statsd'):
             sudo('mv stats.js /opt/statsd/')
             sudo('mv config.js /opt/statsd/')
@@ -156,9 +169,9 @@ def install_graphite():
             with cd('graphite'):
                 run('pip install .')
             # install latest release of carbon
-            run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/carbon-0.9.8.tar.gz')
+            run('pip install http://launchpadlibrarian.net/82112362/carbon-0.9.9.tar.gz')
             # install latest release of whisper
-            run('pip install http://launchpad.net/graphite/1.0/0.9.8/+download/whisper-0.9.8.tar.gz')
+            run('pip install http://launchpadlibrarian.net/82112367/whisper-0.9.9.tar.gz')
             # "pip install py2cairo" picks python3.0 version of py2cairo, hence explicit link
             run('pip install http://www.cairographics.org/releases/py2cairo-1.8.10.tar.gz')
             # run the django webapp syncdb command
@@ -283,6 +296,7 @@ def setup():
     """
     installs graphite and statsd on the remote EC2 host
     """
+    sudo('yum -y -q update')
     sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
     install_dtach()
     install_nodejs()
