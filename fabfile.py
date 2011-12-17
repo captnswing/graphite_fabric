@@ -16,7 +16,7 @@ Usage:
 """
 from fabric.api import *
 from fabric.context_managers import cd
-from fabric.contrib.files import sed, exists
+from fabric.contrib.files import sed, exists, append
 import urllib2
 import sys
 import os
@@ -32,7 +32,7 @@ env.python = '/usr/bin/python'
 
 @task
 def labmanager():
-    env.hosts = ['10.20.61.14']
+    env.hosts = ['10.20.61.123']
     env.user = 'si'
     env.password = 'si'
     # root dir for virtualenvs on the remote machine
@@ -40,7 +40,7 @@ def labmanager():
     # name of the virtualenv we're using here
     env.venv_name = 'base'
     # link to python 2.6
-    env.python = '/usr/local/bin/python'
+    env.python = '/usr/bin/python26'
 
 
 def install_mod_wsgi():
@@ -119,9 +119,8 @@ def install_statsd():
     with cd('/tmp/'):
         sudo('rm -rf statsd')
         run('env GIT_SSL_NO_VERIFY=true git clone https://github.com/etsy/statsd.git')
-        with cd('statsd'):
-            sudo('mv stats.js /opt/statsd/')
-            sudo('mv config.js /opt/statsd/')
+        get_configfile('/opt/statsd/stats.js')
+        get_configfile('/opt/statsd/config.js')
 
 
 def install_cairo():
@@ -244,7 +243,8 @@ def start_supervisord():
     this starts all the configured services as well
     """
     if not exists('/usr/bin/supervisord'):
-        sudo('pip install supervisor')
+        with prefix('PIP_REQUIRE_VIRTUALENV=false'):
+            sudo('pip install supervisor')
     sudo('/usr/bin/supervisord')
 
 
@@ -256,6 +256,7 @@ def check_graphite():
     with hide('running', 'stdout'):
         hostname = run('uname -n')
     image_url = 'http://%s/render/?target=carbon.agents.%s.pointsPerUpdate' % (env.hosts[0], hostname)
+    print image_url
     # open the image
     try:
         response = urllib2.urlopen(image_url)
@@ -296,16 +297,26 @@ def setup():
     """
     installs graphite and statsd on the remote EC2 host
     """
-    sudo('yum -y -q update')
-    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
-    install_dtach()
-    install_nodejs()
-    install_cairo()
-    install_mod_wsgi()
-    configure_shell()
-    install_virtualenv()
-    install_graphite()
+#    if env['host'][:6] == '10.20.':
+#        # we're in SVT's network
+#        append('/home/si/.bashrc', ['export http_proxy=http://proxy.svt.se:8080', 'export https_proxy=https://proxy.svt.se:8080'])
+#        run('wget http://download.fedora.redhat.com/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm')
+#        sudo('rpm -Uvh epel-release-5-4.noarch.rpm')
+#        append('/etc/sudoers', 'Defaults env_keep = *', use_sudo=True)
+#    sudo('yum -y -q update')
+#    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
+#    install_dtach()
+#    install_nodejs()
+#    install_cairo()
+#    install_mod_wsgi()
+#    configure_shell()
+#    if env['host'][:6] == '10.20.':
+#        # we're in SVT's network
+#        # reappend proxy settings
+#        append('/home/si/.bashrc', ['export http_proxy=http://proxy.svt.se:8080', 'export https_proxy=https://proxy.svt.se:8080'])
+#    install_virtualenv()
+#    install_graphite()
     install_statsd()
-    configure_services()
-    start_supervisord()
-    graphite("start")
+#    configure_services()
+#    start_supervisord()
+#    graphite("start")
