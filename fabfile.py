@@ -32,7 +32,7 @@ env.python = '/usr/bin/python'
 
 @task
 def labmanager():
-    env.hosts = ['10.20.61.123']
+    env.hosts = ['10.20.61.127']
     env.user = 'si'
     env.password = 'si'
     # root dir for virtualenvs on the remote machine
@@ -236,7 +236,7 @@ def configure_services():
     if exists('~/.virtualenvs'):
         sudo('chown -R {0.user:>s} /home/{user:>s}/.virtualenvs'.format(env))
 
-
+@task
 def start_supervisord():
     """
     starts supervisord (installs it first, if not present)
@@ -300,23 +300,23 @@ def setup():
 #    if env['host'][:6] == '10.20.':
 #        # we're in SVT's network
 #        append('/home/si/.bashrc', ['export http_proxy=http://proxy.svt.se:8080', 'export https_proxy=https://proxy.svt.se:8080'])
-#        run('wget http://download.fedora.redhat.com/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm')
-#        sudo('rpm -Uvh epel-release-5-4.noarch.rpm')
 #        append('/etc/sudoers', 'Defaults env_keep = *', use_sudo=True)
+#        run('wget http://download.fedora.redhat.com/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm')
+#        sudo('rpm -Uvh /home/si/epel-release-5-4.noarch.rpm')
 #    sudo('yum -y -q update')
-#    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
-#    install_dtach()
-#    install_nodejs()
-#    install_cairo()
-#    install_mod_wsgi()
-#    configure_shell()
-#    if env['host'][:6] == '10.20.':
-#        # we're in SVT's network
-#        # reappend proxy settings
-#        append('/home/si/.bashrc', ['export http_proxy=http://proxy.svt.se:8080', 'export https_proxy=https://proxy.svt.se:8080'])
-#    install_virtualenv()
-#    install_graphite()
+    sudo('yum -y -q install bzr screen mlocate make gcc gcc-c++ python26-devel httpd-devel git-core')
+    install_dtach()
+    install_nodejs()
+    install_cairo()
+    install_mod_wsgi()
+    configure_shell()
+    if env['host'][:6] == '10.20.':
+        # we're in SVT's network
+        # reappend proxy settings
+        append('/home/si/.bashrc', ['export http_proxy=http://proxy.svt.se:8080', 'export https_proxy=https://proxy.svt.se:8080'])
+    install_virtualenv()
+    install_graphite()
     install_statsd()
-#    configure_services()
-#    start_supervisord()
-#    graphite("start")
+    configure_services()
+    start_supervisord()
+    graphite("start")
