@@ -1,8 +1,11 @@
+libpixman = "/usr/local/lib/libpixman-1.so.#{node[:pixman][:version]}"
+libcairo = "/usr/local/lib/libcairo.a"
+
 remote_file "#{node[:srcdir]}/pixman-#{node[:pixman][:version]}.tar.gz" do
     source "http://cairographics.org/releases/pixman-#{node[:pixman][:version]}.tar.gz"
     action :create_if_missing
     mode "0644"
-  	not_if "test -e /usr/local/lib/libpixman-1.so.#{node[:pixman][:version]}"
+	not_if { ::File.exists?(libpixman) }
 end
 
 bash "install pixman from source" do
@@ -15,7 +18,7 @@ bash "install pixman from source" do
 		make && \
 		make install
 	EOH
-	not_if "test -e /usr/local/lib/libpixman-1.so.#{node[:pixman][:version]}"
+	not_if { ::File.exists?(libpixman) }
 end
 
 case node[:platform]
@@ -40,7 +43,7 @@ remote_file "#{node[:srcdir]}/cairo-#{node[:cairo][:version]}.tar.gz" do
     source "http://cairographics.org/releases/cairo-#{node[:cairo][:version]}.tar.gz"
     action :create_if_missing
     mode "0644"
-  	not_if "test -e /usr/local/lib/libcairo.a"
+	not_if { ::File.exists?(libcairo) }
 end
 
 bash "install cairo from source" do
@@ -53,5 +56,5 @@ bash "install cairo from source" do
 		make && \
 		make install
 	EOH
-	not_if "test -e /usr/local/lib/libcairo.a"
+	not_if { ::File.exists?(libcairo) }
 end
