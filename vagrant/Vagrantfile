@@ -36,6 +36,8 @@ Vagrant::Config.run do |config|
       :cairo => {:version => "1.10.2"},
       :pixman => {:version => "0.24.0"},
       :nodejs => {:version => "0.6.6"},
+      :python => {:version => '2.7.2',
+                  :checksum => '5057eb067eb5b5a6040dbd0e889e06550bde9ec041dadaa855ee9490034cbdab'}
     })
   end
 
