@@ -28,8 +28,8 @@ Vagrant::Config.run do |config|
   config.vm.provision :chef_solo do |chef|
     chef.cookbooks_path = "cookbooks"
     chef.add_recipe "graphite"
-    chef.log_level = :debug
-  #  chef.add_role "web"
+    #chef.log_level = :debug
+    #chef.add_role "web"
 
     # You may also specify custom JSON attributes:
     chef.json.merge!({
