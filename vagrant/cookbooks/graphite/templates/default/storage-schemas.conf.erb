@@ -1,0 +1,6 @@
+# https://github.com/etsy/statsd/issues/32#issuecomment-1830985
+[stats]
+priority = 110
+pattern = ^stats.*
+# 10 sec for a day, 1 min data for a week, 10 min data for 30 days
+retentions = 10:8640,60:10080,600:262974
