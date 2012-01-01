@@ -34,8 +34,7 @@ Vagrant::Config.run do |config|
   config.vm.provision :chef_solo do |chef|
     chef.cookbooks_path = "cookbooks"
     chef.add_recipe "graphite"
-    #chef.add_recipe "python" # to get to pip&virtualenv resources
-    chef.log_level = :debug
+    #chef.log_level = :debug
     #chef.add_role "web"
 
     # override attributes/default.rb
