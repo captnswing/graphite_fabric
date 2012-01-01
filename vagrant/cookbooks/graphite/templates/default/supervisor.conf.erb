@@ -1,0 +1,44 @@
+[unix_http_server]
+file=/tmp/supervisor.sock
+
+[supervisord]
+logfile=/tmp/supervisord.log
+logfile_maxbytes=50MB
+logfile_backups=10
+loglevel=info
+pidfile=/tmp/supervisord.pid
+nodaemon=false
+minfds=1024
+minprocs=200
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock
+
+[program:carbon]
+; nondaemonized startup method required
+; http://supervisord.org/subprocess.html
+command=/opt/graphite/bin/carbon-cache.py --debug start
+
+[program:gunicorn]
+; nondaemonized startup method required
+; http://supervisord.org/subprocess.html
+command=<%= node[:venv] %>/bin/gunicorn_django --preload -w 2 --log-level debug --log-file <%= node[:venv] %>/run/gunicorn.log -p <%= node[:venv] %>/run/gunicorn.pid /opt/graphite/webapp/graphite/settings.py
+redirect_stderr=true
+
+[program:node]
+; nondaemonized startup method required
+; http://supervisord.org/subprocess.html
+command=/usr/local/bin/node /opt/statsd/stats.js /etc/statsd.js
+
+[group:graphite]
+; common parameters
+programs=node,carbon,apache
+numprocs=1
+startsecs=3
+autostart=true
+autorestart=true
+startretries=3
+exitcodes=0,2
