@@ -3,13 +3,14 @@ syntax: glob
 
 *.pyc
 build
-dist        
+dist
 .idea
+.vagrant
 .project
 .pydevproject
 .settings
 .svn
-*.egg-info          
+*.egg-info
 *.egg
 nbproject
 .DS_Store
