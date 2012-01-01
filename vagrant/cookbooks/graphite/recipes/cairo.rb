@@ -5,7 +5,6 @@ remote_file "#{node[:srcdir]}/pixman-#{node[:pixman][:version]}.tar.gz" do
     source "http://cairographics.org/releases/pixman-#{node[:pixman][:version]}.tar.gz"
     action :create_if_missing
     mode "0644"
-	not_if { ::File.exists?(libpixman) }
 end
 
 bash "install pixman from source" do
@@ -18,15 +17,8 @@ bash "install pixman from source" do
 		make && \
 		make install
 	EOH
-	not_if { ::File.exists?(libpixman) }
+	not_if "test -e #{libpixman}"
 end
-
-case node[:platform]
-when "ubuntu","debian"
-    execute "apt-get update" do
-        action :run
-    end
- end
 
 packages = value_for_platform(
     ["centos","redhat","fedora","amazon"] =>
@@ -43,7 +35,6 @@ remote_file "#{node[:srcdir]}/cairo-#{node[:cairo][:version]}.tar.gz" do
     source "http://cairographics.org/releases/cairo-#{node[:cairo][:version]}.tar.gz"
     action :create_if_missing
     mode "0644"
-	not_if { ::File.exists?(libcairo) }
 end
 
 bash "install cairo from source" do
@@ -56,5 +47,5 @@ bash "install cairo from source" do
 		make && \
 		make install
 	EOH
-	not_if { ::File.exists?(libcairo) }
+	not_if "test -e #{libcairo}"
 end

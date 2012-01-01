@@ -22,22 +22,31 @@ Vagrant::Config.run do |config|
   # folder, and the third is the path on the host to the actual folder.
   # config.vm.share_folder "v-data", "/vagrant_data", "../data"
 
+  # Boost CPU & RAM slightly and give it a reasonable name
+  config.vm.customize do |vm|
+     vm.memory_size = 512
+     vm.cpu_count = 2
+     vm.name = "graphite"
+  end
+
   # Enable provisioning with chef solo, specifying a cookbooks path (relative
   # to this Vagrantfile), and adding some recipes and/or roles.
-
   config.vm.provision :chef_solo do |chef|
     chef.cookbooks_path = "cookbooks"
     chef.add_recipe "graphite"
-    #chef.log_level = :debug
+    #chef.add_recipe "python" # to get to pip&virtualenv resources
+    chef.log_level = :debug
     #chef.add_role "web"
 
-    # You may also specify custom JSON attributes:
+    # override attributes/default.rb
     chef.json.merge!({
-      :cairo => {:version => "1.10.2"},
-      :pixman => {:version => "0.24.0"},
-      :nodejs => {:version => "0.6.6"},
-      :python => {:version => '2.7.2',
-                  :checksum => '5057eb067eb5b5a6040dbd0e889e06550bde9ec041dadaa855ee9490034cbdab'}
+        # override node cookbook attributes
+        :nodejs => {:version => "0.6.6"},
+        # override python cookbook attributes
+        :python => {:install_method => 'source',
+                    :version => '2.7.2',
+                    :checksum => '5057eb067eb5b5a6040dbd0e889e06550bde9ec041dadaa855ee9490034cbdab'
+        }
     })
   end
 
