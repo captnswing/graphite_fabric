@@ -1,4 +1,4 @@
-directory "#{node[:venv]}/run" do
+directory "#{node[:graphite][:venv]}/run" do
     recursive true
     owner "vagrant"
     group "vagrant"
@@ -6,7 +6,7 @@ directory "#{node[:venv]}/run" do
 end
 
 python_pip "supervisor" do
-    virtualenv "#{node[:venv]}"
+    virtualenv "#{node[:graphite][:venv]}"
     action :install
 end
 

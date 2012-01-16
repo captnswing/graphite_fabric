@@ -1,5 +1,5 @@
 # attributes for graphite cookbook
-default[:cairo][:version] = "1.10.2"
-default[:pixman][:version] = "0.24.0"
-default[:srcdir] = "/usr/local/src"
-default[:venv] = "/opt/virtualenvs/graphite"
+default[:graphite][:cairoversion] = "1.10.2"
+default[:graphite][:pixmanversion] = "0.24.0"
+default[:graphite][:venv] = "/opt/virtualenvs/graphite"
+default[:graphite][:srcdir] = "/usr/local/src"

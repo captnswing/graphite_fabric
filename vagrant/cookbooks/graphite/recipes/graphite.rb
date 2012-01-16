@@ -1,17 +1,19 @@
+include_recipe "graphite::cairo"
+
 directory "/opt/graphite" do
     owner "vagrant"
     group "vagrant"
     mode 0775
 end
 
-directory "#{node[:venv]}" do
+directory "#{node[:graphite][:venv]}" do
     recursive true
     owner "vagrant"
     group "vagrant"
     mode 0775
 end
 
-python_virtualenv "#{node[:venv]}" do
+python_virtualenv "#{node[:graphite][:venv]}" do
     # TODO
     interpreter "#{node[:python][:prefix_dir]}/bin/python"
     owner "vagrant"
@@ -21,7 +23,7 @@ end
 
 %w{gunicorn python-memcached django django-tagging}.each do |pypkg|
     python_pip pypkg do
-        virtualenv "#{node[:venv]}"
+        virtualenv "#{node[:graphite][:venv]}"
         action :install
     end
 end
@@ -34,15 +36,14 @@ graphite_tarballs = ["http://www.cairographics.org/releases/py2cairo-1.8.10.tar.
 
 # install all the tarballs in the venv
 graphite_tarballs.each do |remote_tball|
-    # TODO
-    local_tball = "#{node[:srcdir]}/" + File.basename(remote_tball)
+    local_tball = "#{node[:python][:srcdir]}/" + File.basename(remote_tball)
     remote_file local_tball do
         source remote_tball
         action :create_if_missing
         mode "0644"
     end
     python_pip local_tball do
-        virtualenv "#{node[:venv]}"
+        virtualenv "#{node[:graphite][:venv]}"
         action :install
         # TODO
         #not_if "[ `pip freeze | grep #{pkg} | cut -d'=' -f3` = '#{version}' ]"
@@ -51,7 +52,7 @@ end
 
 # 'import graphite' needs to work when in the virtualenv
 execute "change_pythonpath" do
-  cwd "#{node[:venv]}/bin"
+  cwd "#{node[:graphite][:venv]}/bin"
   user "vagrant"
   command "echo 'export PYTHONPATH=/opt/graphite/webapp:$PYTHONPATH' >>activate"
 end
@@ -67,7 +68,7 @@ end
 execute "managepy_syncdb" do
     cwd "/opt/graphite/webapp/graphite"
     user "vagrant"
-    command ". #{node[:venv]}/bin/activate; python manage.py syncdb --noinput"
+    command ". #{node[:graphite][:venv]}/bin/activate; python manage.py syncdb --noinput"
 end
 
 # install graphite.wsgi

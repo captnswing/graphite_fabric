@@ -1,3 +1,5 @@
+include_recipe "nodejs"
+
 directory "/opt/statsd" do
     owner "vagrant"
     group "vagrant"

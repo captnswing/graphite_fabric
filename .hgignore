@@ -1,20 +1,20 @@
 # use glob syntax.
 syntax: glob
 
-*.pyc
-build
-dist
 .idea
 .vagrant
 .project
 .pydevproject
 .settings
 .svn
+.DS_Store
+.coverage
 *.egg-info
 *.egg
+*.pyc
+build
+dist
 nbproject
-.DS_Store
 distribute*.tar.gz
 localsettings.py
-.coverage
 nosetests.xml

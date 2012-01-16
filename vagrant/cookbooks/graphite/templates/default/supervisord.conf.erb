@@ -2,11 +2,11 @@
 file=/tmp/supervisor.sock
 
 [supervisord]
-logfile=<%= node[:venv] %>/run/supervisord.log
+logfile=<%= node[:graphite][:venv] %>/run/supervisord.log
 logfile_maxbytes=50MB
 logfile_backups=10
 loglevel=info
-pidfile=<%= node[:venv] %>/run/supervisord.pid
+pidfile=<%= node[:graphite][:venv] %>/run/supervisord.pid
 nodaemon=false
 minfds=1024
 minprocs=200
@@ -22,10 +22,14 @@ serverurl=unix:///tmp/supervisor.sock
 ; http://supervisord.org/subprocess.html
 command=/opt/graphite/bin/carbon-cache.py --debug start
 
+[program:graphite-devel-server]
+; nondaemonized startup method required
+command=/opt/graphite/bin/run-graphite-devel-server.py /opt/graphite/webapp/graphite
+
 [program:gunicorn]
 ; nondaemonized startup method required
 ; http://supervisord.org/subprocess.html
-command=<%= node[:venv] %>/bin/gunicorn_django --preload -w 2 --log-level debug --log-file <%= node[:venv] %>/run/gunicorn.log -p <%= node[:venv] %>/run/gunicorn.pid /opt/graphite/webapp/graphite/settings.py
+command=<%= node[:graphite][:venv] %>/bin/gunicorn_django --preload -w 2 -b 127.0.0.1 --log-level debug --log-file <%= node[:graphite][:venv] %>/run/gunicorn.log -p <%= node[:graphite][:venv] %>/run/gunicorn.pid /opt/graphite/webapp/graphite/settings.py
 redirect_stderr=true
 
 [program:node]
@@ -35,7 +39,7 @@ command=/usr/local/bin/node /opt/statsd/stats.js /etc/statsd.js
 
 [group:graphite]
 ; common parameters
-programs=node,carbon,gunicorn
+programs=node,carbon,gunicorn,graphite-devel-server
 numprocs=1
 startsecs=3
 autostart=true
