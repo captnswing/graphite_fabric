@@ -36,7 +36,7 @@ On your local machine, you need mercurial, python2 >= 2.6 and [python-fabric](ht
 
 # Installing graphite with this fabfile
 
-Once fabric is installed, and the ec2 instance is running,
+Once fabric is installed, and the EC2 instance is running,
 test that you are able to ssh into your EC2 instance, using something like
 
     ssh -i ~/.ssh/myec2key.pem ec2-user@ec2-xxx-xxx-xxx-xxx.eu-west-1.compute.amazonaws.com
