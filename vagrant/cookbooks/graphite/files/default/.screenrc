@@ -1,8 +1,0 @@
-autodetach on
-vbell on
-startup_message off
-shell -$SHELL
-defscrollback 10000
-verbose on
-nonblock on
-caption always "%{W}%{wK}%-Lw%{YK}%50>%n %t %{-}%+Lw%< %= %{GK}%H%{-} %{wK}%d/%m %0c"

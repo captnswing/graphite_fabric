@@ -1,8 +1,7 @@
 # Introduction
 
 Inspired by Etsy's seminal blogpost [Measure anything, measure everything](http://codeascraft.etsy.com/2011/02/15/measure-anything-measure-everything),
-I set out to install [Graphite](http://graphite.wikidot.com) and [statsd](http://github.com/etsy/statsd) myself.
-
+w
 It turned out to be quite a bit more involved than
 
     sudo yum -y install graphite statsd     # yeah I wish...
@@ -54,7 +53,7 @@ On the EC2 host, `supervisord` takes care of running apache httpd, graphite carb
 You can check the status of these services by invoking
 
     fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:status
-    
+
 Also
 
     fab -i <path to EC2 .pem> -H <EC2 hostname> graphite:stop
