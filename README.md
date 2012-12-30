@@ -22,11 +22,11 @@ Works on my machines, YMMV!
 Suitable Amazon EC2 linux instance (I often use `Basic 64-bit Amazon Linux AMI 2011.02.1 Beta`
 on an `m1.large` machine)
 
-![image](https://bitbucket.org/captnswing/graphite_provisioning/raw/default/ec2instance.png)
+![image](https://bitbucket.org/captnswing/graphite_fabric/raw/default/ec2instance.png)
 
 The instance need to be configured with a security group that has the necessary UDP / TCP ports opened.
 
-![image](https://bitbucket.org/captnswing/graphite_provisioning/raw/default/ec2firewall.png)
+![image](https://bitbucket.org/captnswing/graphite_fabric/raw/default/ec2firewall.png)
 
 ## Local machine
 
